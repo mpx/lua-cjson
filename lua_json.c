@@ -35,11 +35,21 @@
 #include <lauxlib.h>
 
 #include "lua_json.h"
+#include "lua_misc.h"
 #include "utils.h"
 #include "strbuf.h"
 
 /* ===== ENCODING ===== */
 
+static void json_encode_exception(lua_State *l, strbuf_t *json,
+                                  char *location, int lindex)
+                                  
+{
+    strbuf_free(json);
+
+    luaL_error(l, "Cannot serialise %s: %s", location,
+               lua_typename(l, lua_type(l, lindex)));
+}
 
 /* JSON escape a character if required, or return NULL */
 static inline char *json_escape_char(int c)
@@ -177,7 +187,8 @@ static void json_append_object(lua_State *l, strbuf_t *json)
             json_append_string(l, json, -2);
             strbuf_append_string(json, ": ");
         } else {
-            die("Cannot serialise table key %s", lua_typename(l, lua_type(l, -2)));
+            json_encode_exception(l, json, "table key", -2);
+            /* never returns */
         }
 
         /* table, key, value */
@@ -189,11 +200,7 @@ static void json_append_object(lua_State *l, strbuf_t *json)
     strbuf_append_string(json, " }");
 }
 
-/* Serialise Lua data into JSON string.
- *
- * FIXME:
- * - Error handling when cannot serialise key or value (return to script)
- */
+/* Serialise Lua data into JSON string. */
 static void json_append_data(lua_State *l, strbuf_t *json)
 {
     int len;
@@ -227,13 +234,14 @@ static void json_append_data(lua_State *l, strbuf_t *json)
             break;
         }
     default:
-        /* Remaining types (LUA_TFUNCTION, LUA_TUSERDATA, LUA_TTHREAD, and LUA_TLIGHTUSERDATA)
-         * cannot be serialised */
-        /* FIXME: return error */
-        die("Cannot serialise %s", lua_typename(l, lua_type(l, -1)));
+        /* Remaining types (LUA_TFUNCTION, LUA_TUSERDATA, LUA_TTHREAD,
+         * and LUA_TLIGHTUSERDATA) cannot be serialised */
+        json_encode_exception(l, json, "value", -1);
+        /* never returns */
     }
 }
 
+/* lua_json_encode can throw an exception */
 char *lua_json_encode(lua_State *l, int *len)
 {
     strbuf_t buf;
@@ -245,6 +253,23 @@ char *lua_json_encode(lua_State *l, int *len)
     json = strbuf_free_to_string(&buf, len);
 
     return json;
+}
+
+/* lua_c_json_encode(object) must be called via lua_pcall().
+ * It can be used to catch any encoder exceptions */
+int lua_c_json_encode(lua_State *l)
+{
+    char *json;
+    int len;
+
+    lua_ensure_arg_count(l, "lua_c_json_encode", 1);
+
+    json = lua_json_encode(l, &len);
+
+    lua_pushlightuserdata(l, json);
+    lua_pushnumber(l, len);
+
+    return 2;
 }
 
 int lua_api_json_encode(lua_State *l)
@@ -493,7 +518,7 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
 
 /* This function does not return.
  * DO NOT CALL WITH DYNAMIC MEMORY ALLOCATED.
- * The only allowed exception is the temporary parser string
+ * The only supported exception is the temporary parser string
  * json->tmp struct.
  * json and token should exist on the stack somewhere.
  * luaL_error() will long_jmp and release the stack */
@@ -627,21 +652,35 @@ void lua_json_decode(lua_State *l, const char *json_text)
     strbuf_free(json.tmp);
 }
 
+/* lua_c_json_decode(string) must be called from C with lua_pcall() */
+int lua_c_json_decode(lua_State *l)
+{
+    const char *json;
+
+    lua_ensure_arg_count(l, "json_c_json_decode", 1);
+    luaL_argcheck(l, lua_islightuserdata(l, 1), 1,
+                  "missing lightuserdata");
+
+    json = lua_touserdata(l, 1);
+    lua_pop(l, 1);
+
+    lua_json_decode(l, json);
+
+    return 1;
+}
+
 static int lua_api_json_decode(lua_State *l)
 {
-    int i, n;
+    const char *json;
 
-    n = lua_gettop(l);
+    lua_ensure_arg_count(l, "json.decode", 1);
+    json = luaL_checkstring(l, 1);
 
-    for (i = 1; i <= n; i++) {
-        if (lua_isstring(l, i)) {
-            lua_json_decode(l, lua_tostring(l, i));
-        } else {
-            lua_pushnil(l);
-        }
-    }
+    lua_json_decode(l, json);
 
-    return n;   /* Number of results */
+    lua_remove(l, 1);
+    
+    return 1;
 }
 
 /* ===== INITIALISATION ===== */
