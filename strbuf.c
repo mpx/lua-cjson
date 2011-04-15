@@ -18,10 +18,14 @@ static void die(const char *format, ...)
 
 void strbuf_init(strbuf_t *s)
 {
-    s->data = NULL;
+    s->buf = NULL;
     s->size = 0;
     s->length = 0;
     s->increment = STRBUF_DEFAULT_INCREMENT;
+    s->dynamic = 0;
+
+    strbuf_resize(s, 0);
+    strbuf_ensure_null(s);
 }
 
 strbuf_t *strbuf_new()
@@ -33,6 +37,9 @@ strbuf_t *strbuf_new()
         die("Out of memory");
 
     strbuf_init(s);
+
+    /* Dynamic strbuf allocation / deallocation */
+    s->dynamic = 1;
 
     return s;
 }
@@ -47,22 +54,26 @@ void strbuf_set_increment(strbuf_t *s, int increment)
 
 void strbuf_free(strbuf_t *s)
 {
-    if (s->data)
-        free(s->data);
-    free(s);
+    if (s->buf)
+        free(s->buf);
+    if (s->dynamic)
+        free(s);
 }
 
-char *strbuf_to_char(strbuf_t *s, int *len)
+char *strbuf_free_to_string(strbuf_t *s, int *len)
 {
-    char *data;
+    char *buf;
 
-    data = s->data;
+    strbuf_ensure_null(s);
+
+    buf = s->buf;
     if (len)
         *len = s->length;
 
-    free(s);
+    if (s->dynamic)
+        free(s);
 
-    return data;
+    return buf;
 }
 
 /* Ensure strbuf can handle a string length bytes long (ignoring NULL
@@ -71,28 +82,41 @@ void strbuf_resize(strbuf_t *s, int len)
 {
     int newsize;
 
-    /* Esnure there is room for optional NULL termination */
+    /* Ensure there is room for optional NULL termination */
     newsize = len + 1;
     /* Round up to the next increment */
     newsize = ((newsize + s->increment - 1) / s->increment) * s->increment;
     s->size = newsize;
-    s->data = realloc(s->data, s->size);
-    if (!s->data)
+    s->buf = realloc(s->buf, s->size);
+    if (!s->buf)
         die("Out of memory");
 }
 
 void strbuf_append_mem(strbuf_t *s, const char *c, int len)
 {
-    if (len > strbuf_emptylen(s))
+    if (len > strbuf_empty_length(s))
         strbuf_resize(s, s->length + len);
 
-    memcpy(s->data + s->length, c, len);
+    memcpy(s->buf + s->length, c, len);
     s->length += len;
 }
 
-void strbuf_ensure_null(strbuf_t *s)
+void strbuf_append_string(strbuf_t *s, const char *str)
 {
-    s->data[s->length] = 0;
+    int space, i;
+
+    space = strbuf_empty_length(s);
+
+    for (i = 0; str[i]; i++) {
+        if (space < 1) {
+            strbuf_resize(s, s->length + s->increment);
+            space = strbuf_empty_length(s);
+        }
+
+        s->buf[s->length] = str[i];
+        s->length++;
+        space--;
+    }
 }
 
 void strbuf_append_fmt(strbuf_t *s, const char *fmt, ...)
@@ -108,11 +132,9 @@ void strbuf_append_fmt(strbuf_t *s, const char *fmt, ...)
         /* Append the new formatted string */
         /* fmt_len is the length of the string required, excluding the
          * trailing NULL */
-        empty_len = strbuf_emptylen(s);
-        /* Add 1 since there is also space for the terminating NULL.
-         * If the string hasn't been allocated then empty_len == -1,
-         * and vsprintf() won't store anything on the first pass */
-        fmt_len = vsnprintf(s->data + s->length, empty_len + 1, fmt, arg);
+        empty_len = strbuf_empty_length(s);
+        /* Add 1 since there is also space to store the terminating NULL. */
+        fmt_len = vsnprintf(s->buf + s->length, empty_len + 1, fmt, arg);
         va_end(arg);
 
         if (fmt_len <= empty_len)
