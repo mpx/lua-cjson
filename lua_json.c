@@ -343,7 +343,7 @@ static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *t
 static json_token_type_t json_ch2token[256];
 static char json_ch2escape[256];
 
-static void json_init_lookup_tables()
+void lua_json_global_init()
 {
     int i;
 
@@ -692,8 +692,6 @@ void lua_json_init(lua_State *l)
         { "decode", lua_api_json_decode },
         { NULL, NULL }
     };
-
-    json_init_lookup_tables();
 
     luaL_register(l, "json", reg);
 
