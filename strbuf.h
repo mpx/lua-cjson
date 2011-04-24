@@ -13,15 +13,20 @@ typedef struct {
     int length;
     int increment;
     int dynamic;
+    int reallocs;
+    int debug;
 } strbuf_t;
 
+#ifndef STRBUF_DEFAULT_SIZE
+#define STRBUF_DEFAULT_SIZE 1023
+#endif
 #ifndef STRBUF_DEFAULT_INCREMENT
-#define STRBUF_DEFAULT_INCREMENT 8
+#define STRBUF_DEFAULT_INCREMENT -2
 #endif
 
 /* Initialise */
-extern strbuf_t *strbuf_new();
-extern void strbuf_init(strbuf_t *s);
+extern strbuf_t *strbuf_new(int len);
+extern void strbuf_init(strbuf_t *s, int len);
 extern void strbuf_set_increment(strbuf_t *s, int increment);
 
 /* Release */

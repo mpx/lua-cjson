@@ -247,8 +247,7 @@ char *lua_json_encode(lua_State *l, int *len)
     strbuf_t buf;
     char *json;
 
-    strbuf_init(&buf);
-    strbuf_set_increment(&buf, 256);
+    strbuf_init(&buf, 0);
     json_append_data(l, &buf);
     json = strbuf_free_to_string(&buf, len);
 
@@ -637,8 +636,7 @@ void lua_json_decode(lua_State *l, const char *json_text)
 
     json.data = json_text;
     json.index = 0;
-    json.tmp = strbuf_new();
-    strbuf_set_increment(json.tmp, 256);
+    json.tmp = strbuf_new(0);
 
     json_next_token(&json, &token);
     json_process_value(l, &json, &token);

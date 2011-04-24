@@ -16,19 +16,31 @@ static void die(const char *format, ...)
     exit(-1);
 }
 
-void strbuf_init(strbuf_t *s)
+void strbuf_init(strbuf_t *s, int len)
 {
+    int size;
+
+    if (len <= 0)
+        size = STRBUF_DEFAULT_SIZE;
+    else
+        size = len + 1;         /* \0 terminator */
+
     s->buf = NULL;
-    s->size = 0;
+    s->size = size;
     s->length = 0;
     s->increment = STRBUF_DEFAULT_INCREMENT;
     s->dynamic = 0;
+    s->reallocs = 0;
+    s->debug = 0;
 
-    strbuf_resize(s, 0);
+    s->buf = malloc(size);
+    if (!s->buf)
+        die("Out of memory");
+
     strbuf_ensure_null(s);
 }
 
-strbuf_t *strbuf_new()
+strbuf_t *strbuf_new(int len)
 {
     strbuf_t *s;
 
@@ -36,7 +48,7 @@ strbuf_t *strbuf_new()
     if (!s)
         die("Out of memory");
 
-    strbuf_init(s);
+    strbuf_init(s, len);
 
     /* Dynamic strbuf allocation / deallocation */
     s->dynamic = 1;
@@ -46,14 +58,26 @@ strbuf_t *strbuf_new()
 
 void strbuf_set_increment(strbuf_t *s, int increment)
 {
-    if (increment <= 0)
+    /* Increment > 0:  Linear buffer growth rate
+     * Increment < -1: Exponential buffer growth rate */
+    if (increment == 0 || increment == -1)
         die("BUG: Invalid string increment");
 
     s->increment = increment;
 }
 
+static inline void debug_stats(strbuf_t *s)
+{
+    if (s->debug) {
+        fprintf(stderr, "strbuf(%lx) reallocs: %d, length: %d, size: %d\n",
+                (long)s, s->reallocs, s->length, s->size);
+    }
+}
+
 void strbuf_free(strbuf_t *s)
 {
+    debug_stats(s);
+
     if (s->buf)
         free(s->buf);
     if (s->dynamic)
@@ -63,6 +87,8 @@ void strbuf_free(strbuf_t *s)
 char *strbuf_free_to_string(strbuf_t *s, int *len)
 {
     char *buf;
+
+    debug_stats(s);
 
     strbuf_ensure_null(s);
 
@@ -76,20 +102,52 @@ char *strbuf_free_to_string(strbuf_t *s, int *len)
     return buf;
 }
 
+static int calculate_new_size(strbuf_t *s, int len)
+{
+    int reqsize, newsize;
+
+    if (len <= 0)
+        die("BUG: Invalid strbuf length requested");
+
+    /* Ensure there is room for optional NULL termination */
+    reqsize = len + 1;
+
+    /* If the user has requested to shrink the buffer, do it exactly */
+    if (s->size > reqsize)
+        return reqsize;
+
+    newsize = s->size;
+    if (s->increment < 0) {
+        /* Exponential sizing */
+        while (newsize < reqsize)
+            newsize *= -s->increment;
+    } else {
+        /* Linear sizing */
+        newsize = ((newsize + s->increment - 1) / s->increment) * s->increment;
+    }
+
+    return newsize;
+}
+
+
 /* Ensure strbuf can handle a string length bytes long (ignoring NULL
  * optional termination). */
 void strbuf_resize(strbuf_t *s, int len)
 {
     int newsize;
 
-    /* Ensure there is room for optional NULL termination */
-    newsize = len + 1;
-    /* Round up to the next increment */
-    newsize = ((newsize + s->increment - 1) / s->increment) * s->increment;
+    newsize = calculate_new_size(s, len);
+
+    if (s->debug > 1) {
+        fprintf(stderr, "strbuf(%lx) resize: %d => %d\n",
+                (long)s, s->size, newsize);
+    }
+
     s->size = newsize;
     s->buf = realloc(s->buf, s->size);
     if (!s->buf)
         die("Out of memory");
+    s->reallocs++;
 }
 
 void strbuf_append_mem(strbuf_t *s, const char *c, int len)
@@ -109,7 +167,7 @@ void strbuf_append_string(strbuf_t *s, const char *str)
 
     for (i = 0; str[i]; i++) {
         if (space < 1) {
-            strbuf_resize(s, s->length + s->increment);
+            strbuf_resize(s, s->length + 1);
             space = strbuf_empty_length(s);
         }
 
