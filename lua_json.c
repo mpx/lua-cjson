@@ -261,7 +261,7 @@ int lua_c_json_encode(lua_State *l)
     char *json;
     int len;
 
-    lua_ensure_arg_count(l, "lua_c_json_encode", 1);
+    lua_verify_arg_count(l, 1);
 
     json = lua_json_encode(l, &len);
 
@@ -655,7 +655,7 @@ int lua_c_json_decode(lua_State *l)
 {
     const char *json;
 
-    lua_ensure_arg_count(l, "json_c_json_decode", 1);
+    lua_verify_arg_count(l, 1);
     luaL_argcheck(l, lua_islightuserdata(l, 1), 1,
                   "missing lightuserdata");
 
@@ -671,7 +671,7 @@ static int lua_api_json_decode(lua_State *l)
 {
     const char *json;
 
-    lua_ensure_arg_count(l, "json.decode", 1);
+    lua_verify_arg_count(l, 1);
     json = luaL_checkstring(l, 1);
 
     lua_json_decode(l, json);
