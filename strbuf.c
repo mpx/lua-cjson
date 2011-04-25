@@ -152,9 +152,7 @@ void strbuf_resize(strbuf_t *s, int len)
 
 void strbuf_append_mem(strbuf_t *s, const char *c, int len)
 {
-    if (len > strbuf_empty_length(s))
-        strbuf_resize(s, s->length + len);
-
+    strbuf_ensure_empty_length(s, len);
     memcpy(s->buf + s->length, c, len);
     s->length += len;
 }

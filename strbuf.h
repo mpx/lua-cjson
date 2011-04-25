@@ -38,6 +38,7 @@ extern void strbuf_resize(strbuf_t *s, int len);
 static int strbuf_empty_length(strbuf_t *s);
 static int strbuf_length(strbuf_t *s);
 static char *strbuf_string(strbuf_t *s, int *len);
+static  void strbuf_ensure_empty_length(strbuf_t *s, int len);
 
 /* Update */
 extern void strbuf_append_fmt(strbuf_t *s, const char *format, ...);
@@ -53,6 +54,12 @@ static inline int strbuf_empty_length(strbuf_t *s)
     return s->size - s->length - 1;
 }
 
+static inline void strbuf_ensure_empty_length(strbuf_t *s, int len)
+{
+    if (len > strbuf_empty_length(s))
+        strbuf_resize(s, s->length + len);
+}
+
 static inline int strbuf_length(strbuf_t *s)
 {
     return s->length;
@@ -60,9 +67,12 @@ static inline int strbuf_length(strbuf_t *s)
 
 static inline void strbuf_append_char(strbuf_t *s, const char c)
 {
-    if (strbuf_empty_length(s) < 1)
-        strbuf_resize(s, s->length + 1);
+    strbuf_ensure_empty_length(s, 1);
+    s->buf[s->length++] = c;
+}
 
+static inline void strbuf_append_char_unsafe(strbuf_t *s, const char c)
+{
     s->buf[s->length++] = c;
 }
 

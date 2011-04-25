@@ -7,24 +7,18 @@
  *   json.null.
  * - Parsing comments is not support. According to json.org, this isn't
  *   part of the spec.
+ *
+ * Note: lua_json_decode() probably spends significant time rehashing
+ *       tables since it is difficult to know their size ahead of time.
+ *       Earlier JSON libaries didn't have this problem but the intermediate
+ *       storage (and their implementations) were much slower anyway..
  */
 
 /* FIXME:
  * - Ensure JSON data is UTF-8. Fail otherwise.
  *   - Alternatively, dynamically support Unicode in JSON string. Return current locale.
- * - Use lua_checkstack() to ensure there is enough stack space left to
- *   fulfill an operation. What happens if we don't, is that acceptible too?
- *   Does lua_checkstack grow the stack, or merely check if it is possible?
- */
-
-/* FIXME:
+ * - Consider implementing other Unicode standards.
  * - Option to encode non-printable characters? Only \" \\ are required
- * - Unicode?
- */
-
-/* FIXME:
- * - Review memory allocation handling and error returns.
- *   Ensure all memory is free. Including after exceptions.
  */
 
 #include <assert.h>
@@ -94,13 +88,19 @@ static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
 
     str = lua_tolstring(l, lindex, &len);
 
+    /* Worst case is len * 6 (all unicode escapes).
+     * This buffer is reused constantly for small strings
+     * If there are any excess pages, they won't be hit anyway.
+     * This gains ~5% speedup. */
+    strbuf_ensure_empty_length(json, len * 6);
+
     strbuf_append_char(json, '\"');
     for (i = 0; i < len; i++) {
         p = json_escape_char(str[i]);
         if (p)
             strbuf_append_string(json, p);
         else
-            strbuf_append_char(json, str[i]);
+            strbuf_append_char_unsafe(json, str[i]);
     }
     strbuf_append_char(json, '\"');
 }
@@ -536,6 +536,10 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 {
     json_token_t token;
 
+    /* 3 slots required:
+     * .., table, key, value */
+    luaL_checkstack(l, 3, "too many nested data structures");
+
     lua_newtable(l);
 
     json_next_token(json, &token);
@@ -575,6 +579,10 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 {
     json_token_t token;
     int i;
+
+    /* 2 slots required:
+     * .., table, value */
+    luaL_checkstack(l, 2, "too many nested data structures");
 
     lua_newtable(l);
 
