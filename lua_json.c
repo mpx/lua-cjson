@@ -31,13 +31,16 @@
 #include <string.h>
 #include <math.h>
 
+#include <pthread.h>
+
 #include <lua.h>
 #include <lauxlib.h>
 
 #include "lua_json.h"
 #include "lua_misc.h"
-#include "utils.h"
 #include "strbuf.h"
+
+#include "die.h"
 
 /* ===== ENCODING ===== */
 
@@ -342,7 +345,7 @@ static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *t
 static json_token_type_t json_ch2token[256];
 static char json_ch2escape[256];
 
-void lua_json_global_init()
+static void json_global_init()
 {
     int i;
 
@@ -683,6 +686,8 @@ static int lua_api_json_decode(lua_State *l)
 
 /* ===== INITIALISATION ===== */
 
+static pthread_once_t json_global_init_once = PTHREAD_ONCE_INIT;
+
 void lua_json_init(lua_State *l)
 {
     luaL_Reg reg[] = {
@@ -697,6 +702,8 @@ void lua_json_init(lua_State *l)
     lua_pushlightuserdata(l, NULL);
     lua_setfield(l, -2, "null");
     lua_pop(l, 1);
+
+    SYS_NOFAIL(pthread_once(&json_global_init_once, json_global_init));
 }
 
 /* vi:ai et sw=4 ts=4:
