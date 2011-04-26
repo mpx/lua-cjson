@@ -262,9 +262,10 @@ char *lua_json_encode(lua_State *l, int *len)
     return json;
 }
 
-/* lua_c_json_encode(object) must be called via lua_pcall().
- * It can be used to catch any encoder exceptions */
-int lua_c_json_encode(lua_State *l)
+/* lua_json_pcall_encode(object) must be called via lua_pcall().
+ * This allows a C caller to catch any errors without needing
+ * to register the string with Lua for garbage collection. */
+int lua_json_pcall_encode(lua_State *l)
 {
     char *json;
     int len;
@@ -666,8 +667,10 @@ void lua_json_decode(lua_State *l, const char *json_text)
     strbuf_free(json.tmp);
 }
 
-/* lua_c_json_decode(string) must be called from C with lua_pcall() */
-int lua_c_json_decode(lua_State *l)
+/* lua_json_pcall_decode(string) must be called via lua_pcall().
+ * This allows a C caller to catch any errors so the string can
+ * be freed before returning to Lua. */
+int lua_json_pcall_decode(lua_State *l)
 {
     const char *json;
 
