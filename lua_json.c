@@ -31,10 +31,15 @@
 #include <lauxlib.h>
 
 #include "lua_json.h"
-#include "lua_misc.h"
 #include "strbuf.h"
 
 #include "die.h"
+
+
+static void verify_arg_count(lua_State *l, int nargs)
+{
+    luaL_argcheck(l, lua_gettop(l) <= nargs, nargs + 1, "too many arguments");
+}
 
 /* ===== ENCODING ===== */
 
@@ -264,7 +269,7 @@ int lua_c_json_encode(lua_State *l)
     char *json;
     int len;
 
-    lua_verify_arg_count(l, 1);
+    verify_arg_count(l, 1);
 
     json = lua_json_encode(l, &len);
 
@@ -666,7 +671,7 @@ int lua_c_json_decode(lua_State *l)
 {
     const char *json;
 
-    lua_verify_arg_count(l, 1);
+    verify_arg_count(l, 1);
     luaL_argcheck(l, lua_islightuserdata(l, 1), 1,
                   "missing lightuserdata");
 
@@ -682,7 +687,7 @@ static int lua_api_json_decode(lua_State *l)
 {
     const char *json;
 
-    lua_verify_arg_count(l, 1);
+    verify_arg_count(l, 1);
     json = luaL_checkstring(l, 1);
 
     lua_json_decode(l, json);
