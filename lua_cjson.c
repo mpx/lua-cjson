@@ -22,7 +22,6 @@
  * - Option to encode non-printable characters? Only \" \\ are required
  * - Protect against cycles when encoding JSON from a data structure
  *   - Max depth? Notice cycles?
- * - Handle huge sparse arrays?
  */
 
 #include <assert.h>
@@ -35,6 +34,11 @@
 #include <lauxlib.h>
 
 #include "strbuf.h"
+
+/* Encode very sparse arrays as objects */
+#ifndef VERY_SPARSE_ARRAY_RATIO
+#define VERY_SPARSE_ARRAY_RATIO 2
+#endif
 
 /* ===== ENCODING ===== */
 
@@ -113,8 +117,10 @@ static int lua_array_length(lua_State *l)
 {
     double k;
     int max;
+    int items;
 
     max = 0;
+    items = 0;
 
     lua_pushnil(l);
     /* table, startkey */
@@ -126,6 +132,7 @@ static int lua_array_length(lua_State *l)
             if (floor(k) == k && k >= 1) {
                 if (k > max)
                     max = k;
+                items++;
                 lua_pop(l, 1);
                 continue;
             }
@@ -135,6 +142,12 @@ static int lua_array_length(lua_State *l)
         lua_pop(l, 2);
         return -1;
     }
+
+#ifdef VERY_SPARSE_ARRAY_RATIO
+    /* Encode very sparse arrays as objects */
+    if (max > items * VERY_SPARSE_ARRAY_RATIO)
+        return -1;
+#endif
 
     return max;
 }
