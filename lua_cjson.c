@@ -2,11 +2,15 @@
  */
 
 /* Caveats:
- * - No unicode support
+ * - Assumes strings are valid UTF-8 and mostly treats them as opaque
+ *   binary data. Will not throw an exception on bad data.
+ * - Will decode \uXXXX escapes, but leaves high codepoints as UTF-8
+ *   when encoding.
  * - JSON "null" values are represented as lightuserdata. Compare with
  *   json.null.
- * - Parsing comments is not support. According to json.org, this isn't
+ * - Parsing comments is not supported. According to json.org, this isn't
  *   part of the spec.
+ * - Parser accepts number formats beyond the JSON spec.
  *
  * Note: lua_json_decode() probably spends significant time rehashing
  *       tables since it is difficult to know their size ahead of time.
@@ -15,10 +19,10 @@
  */
 
 /* FIXME:
- * - Ensure JSON data is UTF-8. Fail otherwise.
- *   - Alternatively, dynamically support Unicode in JSON string. Return current locale.
- * - Consider implementing other Unicode standards.
  * - Option to encode non-printable characters? Only \" \\ are required
+ * - Protect against cycles when encoding JSON from a data structure
+ *   - Max depth? Notice cycles?
+ * - Handle huge sparse arrays?
  */
 
 #include <assert.h>
@@ -30,16 +34,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "lua_json.h"
 #include "strbuf.h"
-
-#include "die.h"
-
-
-static void verify_arg_count(lua_State *l, int nargs)
-{
-    luaL_argcheck(l, lua_gettop(l) <= nargs, nargs + 1, "too many arguments");
-}
 
 /* ===== ENCODING ===== */
 
@@ -125,7 +120,8 @@ static int lua_array_length(lua_State *l)
     /* table, startkey */
     while (lua_next(l, -2) != 0) {
         /* table, key, value */
-        if ((k = lua_tonumber(l, -2))) {
+        if (lua_isnumber(l, -2) &&
+            (k = lua_tonumber(l, -2))) {
             /* Integer >= 1 ? */
             if (floor(k) == k && k >= 1) {
                 if (k > max)
@@ -228,7 +224,7 @@ static void json_append_data(lua_State *l, strbuf_t *json)
         break;
     case LUA_TTABLE:
         len = lua_array_length(l);
-        if (len >= 0)
+        if (len > 0)
             json_append_array(l, json, len);
         else
             json_append_object(l, json);
@@ -249,43 +245,18 @@ static void json_append_data(lua_State *l, strbuf_t *json)
     }
 }
 
-/* lua_json_encode can throw an exception */
-char *lua_json_encode(lua_State *l, int *len)
+static int json_encode(lua_State *l)
 {
     strbuf_t buf;
     char *json;
+    int len;
+
+    luaL_argcheck(l, lua_gettop(l) == 1, 1, "expected 1 argument");
 
     strbuf_init(&buf, 0);
     json_append_data(l, &buf);
-    json = strbuf_free_to_string(&buf, len);
+    json = strbuf_free_to_string(&buf, &len);
 
-    return json;
-}
-
-/* lua_json_pcall_encode(object) must be called via lua_pcall().
- * This allows a C caller to catch any errors without needing
- * to register the string with Lua for garbage collection. */
-int lua_json_pcall_encode(lua_State *l)
-{
-    char *json;
-    int len;
-
-    verify_arg_count(l, 1);
-
-    json = lua_json_encode(l, &len);
-
-    lua_pushlightuserdata(l, json);
-    lua_pushnumber(l, len);
-
-    return 2;
-}
-
-int lua_api_json_encode(lua_State *l)
-{
-    char *json;
-    int len;
-
-    json = lua_json_encode(l, &len);
     lua_pushlstring(l, json, len);
     free(json);
 
@@ -395,6 +366,98 @@ static void json_global_init()
     json_ch2escape['u'] = 'u';  /* This needs to be parsed as unicode */
 }
 
+static inline int hexdigit2int(char hex)
+{
+    if ('0' <= hex  && hex <= '9')
+        return hex - '0';
+
+    /* Force lowercase */
+    hex |= 0x20;
+    if ('a' <= hex && hex <= 'f')
+        return 10 + hex - 'a';
+
+    return -1;
+}
+
+static int decode_hex4(const char *hex)
+{
+    int digit[4];
+    int i;
+
+    /* Convert ASCII hex digit to numeric digit
+     * Note: this returns an error for invalid hex digits, including
+     *       NULL */
+    for (i = 0; i < 4; i++) {
+        digit[i] = hexdigit2int(hex[i]);
+        if (digit[i] < 0) {
+            return -1;
+        }
+    }
+
+    return (digit[0] << 12) +
+           (digit[1] << 8) +
+           (digit[2] << 4) +
+            digit[3];
+}
+
+static int codepoint_to_utf8(char *utf8, int codepoint)
+{
+    if (codepoint <= 0x7F) {
+        utf8[0] = codepoint;
+        return 1;
+    }
+    
+    if (codepoint <= 0x7FF) {
+        utf8[0] = (codepoint >> 6) | 0xC0;
+        utf8[1] = (codepoint & 0x3F) | 0x80;
+        return 2;
+    }
+
+    if (codepoint <= 0xFFFF) {
+        utf8[0] = (codepoint >> 12) | 0xE0;
+        utf8[1] = ((codepoint >> 6) & 0x3F) | 0x80;
+        utf8[2] = (codepoint & 0x3F) | 0x80;
+        return 3;
+    }
+
+    return 0;
+}
+
+
+/* Called when index pointing to beginning of UCS-2 hex code: uXXXX
+ * Translate to UTF-8 and append to temporary token string.
+ * Must advance index to the next character to be processed.
+ * Returns: 0   success
+ *          -1  error
+ */
+static int json_append_unicode_escape(json_parse_t *json)
+{
+    char utf8[4];       /* 3 bytes of UTF-8 can handle UCS-2 */
+    int codepoint;
+    int len;
+
+    /* Skip 'u' */
+    json->index++;
+
+    /* Fetch UCS-2 codepoint */
+    codepoint = decode_hex4(&json->data[json->index]);
+    if (codepoint < 0) {
+        return -1;
+    }
+
+    /* Convert to UTF-8 */
+    len = codepoint_to_utf8(utf8, codepoint);
+    if (!len) {
+        return -1;
+    }
+
+    /* Append bytes and advance counter */
+    strbuf_append_mem(json->tmp, utf8, len);
+    json->index += 4;
+
+    return 0;
+}
+
 static void json_next_string_token(json_parse_t *json, json_token_t *token)
 {
     char ch;
@@ -402,36 +465,44 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
     /* Caller must ensure a string is next */
     assert(json->data[json->index] == '"');
 
-    /* Gobble string. FIXME, ugly */
+    /* Skip " */
+    json->index++;
 
+    /* json->tmp is the temporary strbuf used to accumulate the
+     * decoded string value. */
     json->tmp->length = 0;
-    while ((ch = json->data[++json->index]) != '"') {
+    while ((ch = json->data[json->index]) != '"') {
+        if (!ch) {
+            /* Premature end of the string */
+            token->type = T_ERROR;
+            return;
+        }
+        
         /* Handle escapes */
         if (ch == '\\') {
-            /* Translate escape code */
-            ch = json_ch2escape[(unsigned char)json->data[++json->index]];
+            /* Skip \ and fetch escape character */
+            json->index++;
+            ch = json->data[json->index];
+
+            /* Translate escape code and append to tmp string */
+            ch = json_ch2escape[(unsigned char)ch];
+            if (ch == 'u') {
+                if (json_append_unicode_escape(json) < 0)
+                    continue;
+
+                token->type = T_ERROR;
+                return;
+            }
             if (!ch) {
                 /* Invalid escape code */
                 token->type = T_ERROR;
                 return;
             }
-            if (ch == 'u') {
-                /* Process unicode */
-                /* FIXME: cleanup memory handling. Implement iconv(3)
-                 * conversion from UCS-2 -> UTF-8
-                 */
-                if (!memcmp(&json->data[json->index], "u0000", 5)) {
-                    /* Handle NULL */
-                    ch = 0;
-                    json->index += 4;
-                } else {
-                    /* Remaining codepoints unhandled */
-                    token->type = T_ERROR;
-                    return;
-                }
-            }
         }
+        /* Append normal character or translated single character
+         * Unicode escapes are handled above */
         strbuf_append_char(json->tmp, ch);
+        json->index++;
     }
     json->index++;  /* Eat final quote (") */
 
@@ -646,7 +717,7 @@ static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *t
 }
 
 /* json_text must be null terminated string */
-void lua_json_decode(lua_State *l, const char *json_text)
+static void lua_json_decode(lua_State *l, const char *json_text)
 {
     json_parse_t json;
     json_token_t token;
@@ -667,59 +738,42 @@ void lua_json_decode(lua_State *l, const char *json_text)
     strbuf_free(json.tmp);
 }
 
-/* lua_json_pcall_decode(string) must be called via lua_pcall().
- * This allows a C caller to catch any errors so the string can
- * be freed before returning to Lua. */
-int lua_json_pcall_decode(lua_State *l)
+static int json_decode(lua_State *l)
 {
     const char *json;
 
-    verify_arg_count(l, 1);
-    luaL_argcheck(l, lua_islightuserdata(l, 1), 1,
-                  "missing lightuserdata");
-
-    json = lua_touserdata(l, 1);
-    lua_pop(l, 1);
-
-    lua_json_decode(l, json);
-
-    return 1;
-}
-
-static int lua_api_json_decode(lua_State *l)
-{
-    const char *json;
-
-    verify_arg_count(l, 1);
+    luaL_argcheck(l, lua_gettop(l) <= 1, 2, "found too many arguments");
     json = luaL_checkstring(l, 1);
 
     lua_json_decode(l, json);
 
-    lua_remove(l, 1);
-    
     return 1;
 }
 
 /* ===== INITIALISATION ===== */
 
+/* FIXME: Rewrite to keep lookup tables within Lua (userdata?)
+ * Remove pthread dependency */
 static pthread_once_t json_global_init_once = PTHREAD_ONCE_INIT;
 
-void lua_json_init(lua_State *l)
+int luaopen_cjson(lua_State *l)
 {
     luaL_Reg reg[] = {
-        { "encode", lua_api_json_encode },
-        { "decode", lua_api_json_decode },
+        { "encode", json_encode },
+        { "decode", json_decode },
         { NULL, NULL }
     };
 
-    luaL_register(l, "json", reg);
+    luaL_register(l, "cjson", reg);
 
-    /* Set json.null, and pop "json" table from the stack */
+    /* Set cjson.null */
     lua_pushlightuserdata(l, NULL);
     lua_setfield(l, -2, "null");
-    lua_pop(l, 1);
 
-    SYS_NOFAIL(pthread_once(&json_global_init_once, json_global_init));
+    pthread_once(&json_global_init_once, json_global_init);
+
+    /* Return cjson table */
+    return 1;
 }
 
 /* vi:ai et sw=4 ts=4:
