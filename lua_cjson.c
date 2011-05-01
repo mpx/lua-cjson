@@ -89,7 +89,7 @@ typedef struct {
     json_token_type_t type;
     int index;
     union {
-        char *string;
+        const char *string;
         double number;
         int boolean;
     } value;
@@ -561,7 +561,9 @@ static int codepoint_to_utf8(char *utf8, int codepoint)
 }
 
 
-/* Called when index pointing to beginning of UCS-2 hex code: uXXXX
+/* Called when index pointing to beginning of UCS-2 hex code: \uXXXX
+ * \u is guaranteed to exist, but the remaining hex characters may be
+ * missing.
  * Translate to UTF-8 and append to temporary token string.
  * Must advance index to the next character to be processed.
  * Returns: 0   success
@@ -574,7 +576,7 @@ static int json_append_unicode_escape(json_parse_t *json)
     int len;
 
     /* Fetch UCS-2 codepoint */
-    codepoint = decode_hex4(&json->data[json->index + 1]);
+    codepoint = decode_hex4(&json->data[json->index + 2]);
     if (codepoint < 0) {
         return -1;
     }
@@ -587,9 +589,17 @@ static int json_append_unicode_escape(json_parse_t *json)
 
     /* Append bytes and advance counter */
     strbuf_append_mem(json->tmp, utf8, len);
-    json->index += 5;
+    json->index += 6;
 
     return 0;
+}
+
+static void json_set_token_error(json_token_t *token, json_parse_t *json,
+                                 const char *errtype)
+{
+    token->type = T_ERROR;
+    token->index = json->index;
+    token->value.string = errtype;
 }
 
 static void json_next_string_token(json_parse_t *json, json_token_t *token)
@@ -609,17 +619,14 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
     while ((ch = json->data[json->index]) != '"') {
         if (!ch) {
             /* Premature end of the string */
-            token->type = T_ERROR;
-            token->index = json->index;
-            token->value.string = "unexpected end of string";
+            json_set_token_error(token, json, "unexpected end of string");
             return;
         }
         
         /* Handle escapes */
         if (ch == '\\') {
-            /* Skip \ and fetch escape character */
-            json->index++;
-            ch = json->data[json->index];
+            /* Fetch escape character */
+            ch = json->data[json->index + 1];
 
             /* Translate escape code and append to tmp string */
             ch = ch2escape[(unsigned char)ch];
@@ -627,18 +634,17 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
                 if (json_append_unicode_escape(json) == 0)
                     continue;
 
-                token->type = T_ERROR;
-                token->index = json->index - 1;     /* point at '\' */
-                token->value.string = "invalid unicode escape";
+                json_set_token_error(token, json,
+                                     "invalid unicode escape code");
                 return;
             }
             if (!ch) {
-                /* Invalid escape code */
-                token->type = T_ERROR;
-                token->index = json->index - 1;
-                token->value.string = "invalid escape";
+                json_set_token_error(token, json, "invalid escape code");
                 return;
             }
+
+            /* Skip '\' */
+            json->index++;
         }
         /* Append normal character or translated single character
          * Unicode escapes are handled above */
@@ -674,13 +680,10 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
     token->type = T_NUMBER;
     startptr = &json->data[json->index];
     token->value.number = strtod(&json->data[json->index], &endptr);
-    if (startptr == endptr) {
-        token->type = T_ERROR;
-        token->index = json->index;
-        token->value.string = "invalid number";
-    } else {
+    if (startptr == endptr)
+        json_set_token_error(token, json, "invalid number");
+    else
         json->index += endptr - startptr;   /* Skip the processed number */
-    }
 
     return;
 }
@@ -703,7 +706,7 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
 
     /* Don't advance the pointer for an error or the end */
     if (token->type == T_ERROR) {
-        token->value.string = "invalid token";
+        json_set_token_error(token, json, "invalid token");
         return;
     }
 
@@ -741,10 +744,8 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         return;
     }
 
-    /* We can fall through here if a token starts with t/f/n but isn't
-     * recognised above */
-    token->type = T_ERROR;
-    token->value.string = "invalid token";
+    /* Token starts with t/f/n but isn't recognised above. */
+    json_set_token_error(token, json, "invalid token");
 }
 
 /* This function does not return.
