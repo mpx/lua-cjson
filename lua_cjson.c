@@ -1,25 +1,41 @@
-/* Lua JSON routines
+/* CJSON - JSON support for Lua
+ *
+ * Copyright (c) 2010-2011  Mark Pulford <mark@kyne.com.au>
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 /* Caveats:
- * - Assumes strings are valid UTF-8 and mostly treats them as opaque
- *   binary data. Will not throw an exception on bad data.
- * - Will decode \uXXXX escapes, but leaves high codepoints as UTF-8
- *   when encoding.
- * - JSON "null" values are represented as lightuserdata. Compare with
- *   json.null.
- * - Parsing comments is not supported. According to json.org, this isn't
- *   part of the spec.
- * - Parser accepts number formats beyond the JSON spec.
+ * - JSON "null" values are represented as lightuserdata since Lua
+ *   tables cannot contain "nil". Compare with cjson.null.
+ * - Only standard JSON escapes and \u0000 are used when encoding
+ *   JSON. Most unprintable characters are not escaped.
+ * - Invalid UTF-8 characters are not detected and will be passed
+ *   untouched.
+ * - Cannot parse NaN/Inf numbers when strict_numbers has been disabled.
+ * - Javascript comments are not part of the JSON spec, and are not
+ *   supported.
  *
- * Note: lua_json_decode() probably spends significant time rehashing
- *       tables since it is difficult to know their size ahead of time.
- *       Earlier JSON libaries didn't have this problem but the intermediate
- *       storage (and their implementations) were much slower anyway..
- */
-
-/* FIXME:
- * - Option to encode non-printable characters? Only \" \\ are required
+ * Note: Decoding is slower than encoding. Lua probably spends
+ *       significant time rehashing tables when parsing JSON since it is
+ *       difficult to know object/array sizes ahead of time.
  */
 
 #include <assert.h>
