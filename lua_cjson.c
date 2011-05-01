@@ -93,7 +93,7 @@ typedef struct {
         double number;
         int boolean;
     } value;
-    int length; /* FIXME: Merge into union? Won't save memory, but more logical */
+    int string_len;
 } json_token_t;
 
 /* ===== CONFIGURATION ===== */
@@ -540,11 +540,8 @@ static int json_append_unicode_escape(json_parse_t *json)
     int codepoint;
     int len;
 
-    /* Skip 'u' */
-    json->index++;
-
     /* Fetch UCS-2 codepoint */
-    codepoint = decode_hex4(&json->data[json->index]);
+    codepoint = decode_hex4(&json->data[json->index + 1]);
     if (codepoint < 0) {
         return -1;
     }
@@ -557,7 +554,7 @@ static int json_append_unicode_escape(json_parse_t *json)
 
     /* Append bytes and advance counter */
     strbuf_append_mem(json->tmp, utf8, len);
-    json->index += 4;
+    json->index += 5;
 
     return 0;
 }
@@ -580,6 +577,8 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
         if (!ch) {
             /* Premature end of the string */
             token->type = T_ERROR;
+            token->index = json->index;
+            token->value.string = "unexpected end of string";
             return;
         }
         
@@ -592,15 +591,19 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
             /* Translate escape code and append to tmp string */
             ch = ch2escape[(unsigned char)ch];
             if (ch == 'u') {
-                if (json_append_unicode_escape(json) < 0)
+                if (json_append_unicode_escape(json) == 0)
                     continue;
 
                 token->type = T_ERROR;
+                token->index = json->index - 1;     /* point at '\' */
+                token->value.string = "invalid unicode escape";
                 return;
             }
             if (!ch) {
                 /* Invalid escape code */
                 token->type = T_ERROR;
+                token->index = json->index - 1;
+                token->value.string = "invalid escape";
                 return;
             }
         }
@@ -614,8 +617,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
     strbuf_ensure_null(json->tmp);
 
     token->type = T_STRING;
-    token->value.string = strbuf_string(json->tmp, NULL);
-    token->length = json->tmp->length;
+    token->value.string = strbuf_string(json->tmp, &token->string_len);
 }
 
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
@@ -639,10 +641,13 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
     token->type = T_NUMBER;
     startptr = &json->data[json->index];
     token->value.number = strtod(&json->data[json->index], &endptr);
-    if (startptr == endptr)
+    if (startptr == endptr) {
         token->type = T_ERROR;
-    else
+        token->index = json->index;
+        token->value.string = "invalid number";
+    } else {
         json->index += endptr - startptr;   /* Skip the processed number */
+    }
 
     return;
 }
@@ -664,10 +669,15 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
     token->index = json->index;
 
     /* Don't advance the pointer for an error or the end */
-    if (token->type == T_ERROR || token->type == T_END)
+    if (token->type == T_ERROR) {
+        token->value.string = "invalid token";
+        return;
+    }
+
+    if (token->type == T_END)
         return;
 
-    /* Found a known token, advance index and return */
+    /* Found a known single character token, advance index and return */
     if (token->type != T_UNKNOWN) {
         json->index++;
         return;
@@ -698,7 +708,10 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         return;
     }
 
+    /* We can fall through here if a token starts with t/f/n but isn't
+     * recognised above */
     token->type = T_ERROR;
+    token->value.string = "invalid token";
 }
 
 /* This function does not return.
@@ -710,9 +723,18 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
 static void json_throw_parse_error(lua_State *l, json_parse_t *json,
                                    const char *exp, json_token_t *token)
 {
+    const char *found;
+
     strbuf_free(json->tmp);
-    luaL_error(l, "Expected %s but found type <%s> at character %d",
-               exp, json_token_type_name[token->type], token->index);
+
+    if (token->type == T_ERROR)
+        found = token->value.string;
+    else
+        found = json_token_type_name[token->type];
+
+    /* Note: token->index is 0 based, display starting from 1 */
+    luaL_error(l, "Expected %s but found %s at character %d",
+               exp, found, token->index + 1);
 }
 
 static void json_parse_object_context(lua_State *l, json_parse_t *json)
@@ -733,17 +755,21 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 
     while (1) {
         if (token.type != T_STRING)
-            json_throw_parse_error(l, json, "object key", &token);
+            json_throw_parse_error(l, json, "object key string", &token);
 
-        lua_pushlstring(l, token.value.string, token.length);     /* Push key */
+        /* Push key */
+        lua_pushlstring(l, token.value.string, token.string_len);
 
         json_next_token(json, &token);
         if (token.type != T_COLON)
             json_throw_parse_error(l, json, "colon", &token);
 
+        /* Fetch value */
         json_next_token(json, &token);
         json_process_value(l, json, &token);
-        lua_rawset(l, -3);            /* Set key = value */
+
+        /* Set key = value */
+        lua_rawset(l, -3);
 
         json_next_token(json, &token);
 
@@ -798,7 +824,7 @@ static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *t
 {
     switch (token->type) {
     case T_STRING:
-        lua_pushlstring(l, token->value.string, token->length);
+        lua_pushlstring(l, token->value.string, token->string_len);
         break;;
     case T_NUMBER:
         lua_pushnumber(l, token->value.number);
