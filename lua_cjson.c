@@ -663,19 +663,29 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
     const char *startptr;
     char *endptr;
+    int i;
 
-    /* FIXME:
-     * Verify that the number takes the following form:
-     * -?(0|[1-9]|[1-9][0-9]+)(.[0-9]+)?([eE][-+]?[0-9]+)?
-     * strtod() below allows other forms (Hex, infinity, NaN,..) */
-    /* i = json->index;
+    /* JSON numbers should take the following form:
+     *      -?(0|[1-9]|[1-9][0-9]+)(.[0-9]+)?([eE][-+]?[0-9]+)?
+     *
+     * strtod() below allows other forms:
+     * - numbers starting with '+'
+     * - infinity, NaN
+     * - hexidecimal numbers
+     *
+     * Infinity/NaN and numbers starting with '+' can't occur due to
+     * earlier parser error checking.
+     *
+     * Generate an error if a hexidecimal number has been
+     * provided ("0x" or "0X").
+     */
+    i = json->index;
     if (json->data[i] == '-')
         i++;
-    j = i;
-    while ('0' <= json->data[i] && json->data[i] <= '9')
-        i++;
-    if (i == j)
-        return T_ERROR; */
+    if (json->data[i] == '0' && (json->data[i + 1] | 0x20) == 'x') {
+        json_set_token_error(token, json, "invalid number (hexidecimal)");
+        return;
+    }
 
     token->type = T_NUMBER;
     startptr = &json->data[json->index];
