@@ -1004,6 +1004,10 @@ int luaopen_cjson(lua_State *l)
     lua_pushlightuserdata(l, NULL);
     lua_setfield(l, -2, "null");
 
+    /* Set cjson.version */
+    lua_pushliteral(l, VERSION);
+    lua_setfield(l, -2, "version");
+
     /* Return cjson table */
     return 1;
 }
