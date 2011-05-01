@@ -209,13 +209,13 @@ static void json_create_config(lua_State *l)
 
 /* ===== ENCODING ===== */
 
-static void json_encode_type_exception(lua_State *l, strbuf_t *json,
-                                       char *location, int lindex)
+static void json_encode_exception(lua_State *l, strbuf_t *json, int lindex,
+                                  const char *reason)
 {
     strbuf_free(json);
 
-    luaL_error(l, "Cannot serialise %s: %s", location,
-               lua_typename(l, lua_type(l, lindex)));
+    luaL_error(l, "Cannot serialise %s: %s",
+                  lua_typename(l, lua_type(l, lindex)), reason);
 }
 
 /* JSON escape a character if required, or return NULL */
@@ -388,7 +388,8 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
             json_append_string(l, json, -2);
             strbuf_append_string(json, ": ");
         } else {
-            json_encode_type_exception(l, json, "table key", -2);
+            json_encode_exception(l, json, -2,
+                                  "table key must be a number or string");
             /* never returns */
         }
 
@@ -439,7 +440,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
     default:
         /* Remaining types (LUA_TFUNCTION, LUA_TUSERDATA, LUA_TTHREAD,
          * and LUA_TLIGHTUSERDATA) cannot be serialised */
-        json_encode_type_exception(l, json, "value", -1);
+        json_encode_exception(l, json, -1, "type not supported");
         /* never returns */
     }
 }
