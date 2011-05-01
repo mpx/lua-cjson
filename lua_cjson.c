@@ -405,7 +405,7 @@ static void json_append_number(lua_State *l, strbuf_t *json, int index,
     double num = lua_tonumber(l, index);
 
     if (strict && (isinf(num) || isnan(num)))
-        json_encode_exception(l, json, index, "must not be NaN of Inf");
+        json_encode_exception(l, json, index, "must not be NaN or Inf");
 
     strbuf_append_fmt(json, LUA_NUMBER_FMT, num);
 }
@@ -433,8 +433,7 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         keytype = lua_type(l, -2);
         if (keytype == LUA_TNUMBER) {
             /* Can't just use json_append_string() below since it would
-             * convert the value in the callers data structure, and it
-             * does not support strict numbers */
+             * convert the value in the callers data structure. */
             strbuf_append_char(json, '"');
             json_append_number(l, json, -2, cfg->strict_numbers);
             strbuf_append_string(json, "\": ");
@@ -903,8 +902,7 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
     if (token.type == T_ARR_END)
         return;
 
-    i = 1;
-    while (1) {
+    for (i = 1; ; i++) {
         json_process_value(l, json, &token);
         lua_rawseti(l, -2, i);            /* arr[i] = value */
 
@@ -917,7 +915,6 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
             json_throw_parse_error(l, json, "comma or array end", &token);
 
         json_next_token(json, &token);
-        i++;
     }
 }
 
