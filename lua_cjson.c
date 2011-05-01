@@ -30,7 +30,6 @@
 
 #include "strbuf.h"
 
-
 #define CJSON_CONFIG_KEY "cjson_configdata"
 #define DEFAULT_SPARSE_RATIO 2
 #define DEFAULT_MAX_DEPTH 20
@@ -76,6 +75,7 @@ typedef struct {
     int sparse_ratio;
     int max_depth;
     int current_depth;
+    int strict_numbers;
 } json_config_t;
 
 typedef struct {  
@@ -112,18 +112,26 @@ static json_config_t *json_fetch_config(lua_State *l)
     return cfg;
 }
 
-static int json_sparse_ratio(lua_State *l)
+/* Checks whether a config variable needs to be updated.
+ * Also return cfg pointer */
+static int cfg_update_requested(lua_State *l, json_config_t **cfg)
 {
-    json_config_t *cfg;
-    int sparse_ratio;
     int args;
 
     args = lua_gettop(l);
     luaL_argcheck(l, args <= 1, 2, "found too many arguments");
 
-    cfg = json_fetch_config(l);
+    *cfg = json_fetch_config(l);
 
-    if (args == 1) {
+    return args;
+}
+
+static int json_sparse_ratio(lua_State *l)
+{
+    json_config_t *cfg;
+    int sparse_ratio;
+
+    if (cfg_update_requested(l, &cfg)) {
         sparse_ratio = luaL_checkinteger(l, 1);
         luaL_argcheck(l, sparse_ratio >= 0, 1,
                       "expected zero or positive integer");
@@ -139,20 +147,28 @@ static int json_max_depth(lua_State *l)
 {
     json_config_t *cfg;
     int max_depth;
-    int args;
 
-    args = lua_gettop(l);
-    luaL_argcheck(l, args <= 1, 2, "found too many arguments");
-
-    cfg = json_fetch_config(l);
-
-    if (args == 1) {
+    if (cfg_update_requested(l, &cfg)) {
         max_depth = luaL_checkinteger(l, 1);
         luaL_argcheck(l, max_depth > 0, 1, "expected positive integer");
         cfg->max_depth = max_depth;
     }
 
     lua_pushinteger(l, cfg->max_depth);
+
+    return 1;
+}
+
+static int json_strict_numbers(lua_State *l)
+{
+    json_config_t *cfg;
+
+    if (cfg_update_requested(l, &cfg)) {
+        luaL_argcheck(l, lua_isboolean(l, 1), 1, "expected boolean");
+        cfg->strict_numbers = lua_toboolean(l, 1);
+    }
+
+    lua_pushboolean(l, cfg->strict_numbers);
 
     return 1;
 }
@@ -205,6 +221,7 @@ static void json_create_config(lua_State *l)
 
     cfg->sparse_ratio = DEFAULT_SPARSE_RATIO;
     cfg->max_depth = DEFAULT_MAX_DEPTH;
+    cfg->strict_numbers = 1;
 }
 
 /* ===== ENCODING ===== */
@@ -360,6 +377,17 @@ static void json_append_array(lua_State *l, json_config_t *cfg, strbuf_t *json,
     cfg->current_depth--;
 }
 
+static void json_append_number(lua_State *l, strbuf_t *json, int index,
+                               int strict)
+{
+    double num = lua_tonumber(l, index);
+
+    if (strict && (isinf(num) || isnan(num)))
+        json_encode_exception(l, json, index, "must not be NaN of Inf");
+
+    strbuf_append_fmt(json, LUA_NUMBER_FMT, num);
+}
+
 static void json_append_object(lua_State *l, json_config_t *cfg,
                                strbuf_t *json)
 {
@@ -382,8 +410,12 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         /* table, key, value */
         keytype = lua_type(l, -2);
         if (keytype == LUA_TNUMBER) {
-            strbuf_append_fmt(json, "\"" LUA_NUMBER_FMT "\": ",
-                                    lua_tonumber(l, -2));
+            /* Can't just use json_append_string() below since it would
+             * convert the value in the callers data structure, and it
+             * does not support strict numbers */
+            strbuf_append_char(json, '"');
+            json_append_number(l, json, -2, cfg->strict_numbers);
+            strbuf_append_string(json, "\": ");
         } else if (keytype == LUA_TSTRING) {
             json_append_string(l, json, -2);
             strbuf_append_string(json, ": ");
@@ -414,7 +446,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
         json_append_string(l, json, -1);
         break;
     case LUA_TNUMBER:
-        strbuf_append_fmt(json, "%lf", lua_tonumber(l, -1));
+        json_append_number(l, json, -1, cfg->strict_numbers);
         break;
     case LUA_TBOOLEAN:
         if (lua_toboolean(l, -1))
@@ -893,6 +925,7 @@ int luaopen_cjson(lua_State *l)
         { "decode", json_decode },
         { "sparse_ratio", json_sparse_ratio },
         { "max_depth", json_max_depth },
+        { "strict_numbers", json_strict_numbers },
         { NULL, NULL }
     };
 
