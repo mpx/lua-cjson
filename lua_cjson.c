@@ -29,7 +29,6 @@
  *   JSON. Most unprintable characters are not escaped.
  * - Invalid UTF-8 characters are not detected and will be passed
  *   untouched.
- * - Cannot parse NaN/Inf numbers when strict_numbers has been disabled.
  * - Javascript comments are not part of the JSON spec, and are not
  *   supported.
  *
@@ -175,6 +174,9 @@ static int json_max_depth(lua_State *l)
     return 1;
 }
 
+/* When disabled, supports:
+ * - encoding/decoding NaN/Infinity.
+ * - decoding hexidecimal numbers. */
 static int json_strict_numbers(lua_State *l)
 {
     json_config_t *cfg;
@@ -214,17 +216,21 @@ static void json_create_config(lua_State *l)
     cfg->ch2token['\r'] = T_WHITESPACE;
 
     /* Update characters that require further processing */
-    cfg->ch2token['n'] = T_UNKNOWN;
-    cfg->ch2token['t'] = T_UNKNOWN;
-    cfg->ch2token['f'] = T_UNKNOWN;
-    cfg->ch2token['"'] = T_UNKNOWN;
+    cfg->ch2token['f'] = T_UNKNOWN;     /* false? */
+    cfg->ch2token['i'] = T_UNKNOWN;     /* inf, ininity? */
+    cfg->ch2token['I'] = T_UNKNOWN;
+    cfg->ch2token['n'] = T_UNKNOWN;     /* null, nan? */
+    cfg->ch2token['N'] = T_UNKNOWN;
+    cfg->ch2token['t'] = T_UNKNOWN;     /* true? */
+    cfg->ch2token['"'] = T_UNKNOWN;     /* string? */
+    cfg->ch2token['+'] = T_UNKNOWN;     /* number? */
     cfg->ch2token['-'] = T_UNKNOWN;
     for (i = 0; i < 10; i++)
         cfg->ch2token['0' + i] = T_UNKNOWN;
 
+    /* Lookup table for parsing escape characters */
     for (i = 0; i < 256; i++)
-        cfg->ch2escape[i] = 0;  /* String error */
-
+        cfg->ch2escape[i] = 0;          /* String error */
     cfg->ch2escape['"'] = '"';
     cfg->ch2escape['\\'] = '\\';
     cfg->ch2escape['/'] = '/';
@@ -233,7 +239,7 @@ static void json_create_config(lua_State *l)
     cfg->ch2escape['n'] = '\n';
     cfg->ch2escape['f'] = '\f';
     cfg->ch2escape['r'] = '\r';
-    cfg->ch2escape['u'] = 'u';  /* This needs to be parsed as unicode */
+    cfg->ch2escape['u'] = 'u';          /* Unicode parsing required */
 
     cfg->sparse_ratio = DEFAULT_SPARSE_RATIO;
     cfg->max_depth = DEFAULT_MAX_DEPTH;
@@ -675,33 +681,53 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
     token->value.string = strbuf_string(json->tmp, &token->string_len);
 }
 
+/* JSON numbers should take the following form:
+ *      -?(0|[1-9]|[1-9][0-9]+)(.[0-9]+)?([eE][-+]?[0-9]+)?
+ *
+ * json_next_number_token() uses strtod() which allows other forms:
+ * - numbers starting with '+'
+ * - NaN, -NaN, infinity, -infinity
+ * - hexidecimal numbers
+ *
+ * json_is_invalid_number() detects "numbers" which may pass strtod()'s
+ * error checking, but should not be allowed with strict JSON.
+ *
+ * json_is_invalid_number() may pass numbers which cause strtod()
+ * to generate an error.
+ */
+static int json_is_invalid_number(json_parse_t *json)
+{
+    int i = json->index;
+    char ch;
+
+    /* Reject numbers starting with + */
+    if (json->data[i] == '+')
+        return 1;
+
+    if (json->data[i] == '-')
+        i++;
+
+    /* Reject numbers starting with 0x, pass other numbers starting
+     * with 0 */
+    if (json->data[i] == '0')
+        return ((json->data[i + 1] | 0x20) == 'x');
+
+    /* Reject inf/nan */
+    ch = json->data[i] | 0x20;
+    if (ch == 'i' && !strncasecmp(&json->data[i], "inf", 3))
+        return 1;
+    if (ch == 'n' && !strncasecmp(&json->data[i], "nan", 3))
+        return 1;
+
+    /* Pass all other numbers which may still be invalid, but
+     * strtod() will catch them. */
+    return 0;
+}
+
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
     const char *startptr;
     char *endptr;
-    int i;
-
-    /* JSON numbers should take the following form:
-     *      -?(0|[1-9]|[1-9][0-9]+)(.[0-9]+)?([eE][-+]?[0-9]+)?
-     *
-     * strtod() below allows other forms:
-     * - numbers starting with '+'
-     * - infinity, NaN
-     * - hexidecimal numbers
-     *
-     * Infinity/NaN and numbers starting with '+' can't occur due to
-     * earlier parser error checking.
-     *
-     * Generate an error if a hexidecimal number has been
-     * provided ("0x" or "0X").
-     */
-    i = json->index;
-    if (json->data[i] == '-')
-        i++;
-    if (json->data[i] == '0' && (json->data[i + 1] | 0x20) == 'x') {
-        json_set_token_error(token, json, "invalid number (hexidecimal)");
-        return;
-    }
 
     token->type = T_NUMBER;
     startptr = &json->data[json->index];
@@ -748,10 +774,18 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
     /* Process characters which triggered T_UNKNOWN */
     ch = json->data[json->index];
 
+    /* Must use strncmp() to match the front of the JSON string
+     * JSON identifier must be lowercase.
+     * When strict_numbers if disabled, either case is allowed for
+     * Infinity/NaN (since we are no longer following the spec..) */
     if (ch == '"') {
         json_next_string_token(json, token);
         return;
     } else if (ch == '-' || ('0' <= ch && ch <= '9')) {
+        if (json->cfg->strict_numbers && json_is_invalid_number(json)) {
+            json_set_token_error(token, json, "invalid number");
+            return;
+        }
         json_next_number_token(json, token);
         return;
     } else if (!strncmp(&json->data[json->index], "true", 4)) {
@@ -767,6 +801,14 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
     } else if (!strncmp(&json->data[json->index], "null", 4)) {
         token->type = T_NULL;
         json->index += 4;
+        return;
+    } else if (!json->cfg->strict_numbers && json_is_invalid_number(json)) {
+        /* When strict_numbers is disabled, only attempt to process
+         * numbers we know are invalid JSON (Inf, NaN, hex)
+         * This is required to generate an appropriate token error,
+         * otherwise all bad tokens will register as "invalid number"
+         */
+        json_next_number_token(json, token);
         return;
     }
 
