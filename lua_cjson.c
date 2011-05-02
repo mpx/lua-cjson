@@ -85,7 +85,11 @@ static const char *json_token_type_name[] = {
 
 typedef struct {
     json_token_type_t ch2token[256];
-    char ch2escape[256];
+    char escape2char[256];  /* Decoding */
+#if 0
+    char escapes[35][8];    /* Pre-generated escape string buffer */
+    char *char2escape[256]; /* Encoding */
+#endif
     strbuf_t encode_buf;
     int sparse_ratio;
     int max_depth;
@@ -111,9 +115,48 @@ typedef struct {
     int string_len;
 } json_token_t;
 
-/* ===== CONFIGURATION ===== */
+static const char *char2escape[256] = {
+    "\\u0000", "\\u0001", "\\u0002", "\\u0003",
+    "\\u0004", "\\u0005", "\\u0006", "\\u0007",
+    "\\b", "\\t", "\\n", "\\u000b",
+    "\\f", "\\r", "\\u000e", "\\u000f",
+    "\\u0010", "\\u0011", "\\u0012", "\\u0013",
+    "\\u0014", "\\u0015", "\\u0016", "\\u0017",
+    "\\u0018", "\\u0019", "\\u001a", "\\u001b",
+    "\\u001c", "\\u001d", "\\u001e", "\\u001f",
+    NULL, NULL, "\\\"", NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, "\\\\", NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, "\\u007f",
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+};
 
 static int json_config_key;
+
+/* ===== CONFIGURATION ===== */
 
 static json_config_t *json_fetch_config(lua_State *l)
 {
@@ -201,6 +244,12 @@ static void json_create_config(lua_State *l)
 
     cfg = lua_newuserdata(l, sizeof(*cfg));
 
+    cfg->sparse_ratio = DEFAULT_SPARSE_RATIO;
+    cfg->max_depth = DEFAULT_MAX_DEPTH;
+    cfg->strict_numbers = 1;
+
+    /* Decoding init */
+
     /* Tag all characters as an error */
     for (i = 0; i < 256; i++)
         cfg->ch2token[i] = T_ERROR;
@@ -233,22 +282,45 @@ static void json_create_config(lua_State *l)
 
     /* Lookup table for parsing escape characters */
     for (i = 0; i < 256; i++)
-        cfg->ch2escape[i] = 0;          /* String error */
-    cfg->ch2escape['"'] = '"';
-    cfg->ch2escape['\\'] = '\\';
-    cfg->ch2escape['/'] = '/';
-    cfg->ch2escape['b'] = '\b';
-    cfg->ch2escape['t'] = '\t';
-    cfg->ch2escape['n'] = '\n';
-    cfg->ch2escape['f'] = '\f';
-    cfg->ch2escape['r'] = '\r';
-    cfg->ch2escape['u'] = 'u';          /* Unicode parsing required */
+        cfg->escape2char[i] = 0;          /* String error */
+    cfg->escape2char['"'] = '"';
+    cfg->escape2char['\\'] = '\\';
+    cfg->escape2char['/'] = '/';
+    cfg->escape2char['b'] = '\b';
+    cfg->escape2char['t'] = '\t';
+    cfg->escape2char['n'] = '\n';
+    cfg->escape2char['f'] = '\f';
+    cfg->escape2char['r'] = '\r';
+    cfg->escape2char['u'] = 'u';          /* Unicode parsing required */
 
-    cfg->sparse_ratio = DEFAULT_SPARSE_RATIO;
-    cfg->max_depth = DEFAULT_MAX_DEPTH;
-    cfg->strict_numbers = 1;
+    /* Encoding init */
 
     strbuf_init(&cfg->encode_buf, 0);
+
+#if 0
+    /* Initialise separate storage for pre-generated escape codes.
+     * Escapes 0-31 map directly, 34, 92, 127 follow afterwards to
+     * save memory. */
+    for (i = 0 ; i < 32; i++)
+        sprintf(cfg->escapes[i], "\\u%04x", i);
+    strcpy(cfg->escapes[8], "\b");              /* Override simpler escapes */
+    strcpy(cfg->escapes[9], "\t");
+    strcpy(cfg->escapes[10], "\n");
+    strcpy(cfg->escapes[12], "\f");
+    strcpy(cfg->escapes[13], "\r");
+    strcpy(cfg->escapes[32], "\\\"");           /* chr(34) */
+    strcpy(cfg->escapes[33], "\\\\");           /* chr(92) */
+    sprintf(cfg->escapes[34], "\\u%04x", 127);  /* char(127) */
+
+    /* Initialise encoding escape lookup table */
+    for (i = 0; i < 32; i++)
+        cfg->char2escape[i] = cfg->escapes[i];
+    for (i = 32; i < 256; i++)
+        cfg->char2escape[i] = NULL;
+    cfg->char2escape[34] = cfg->escapes[32];
+    cfg->char2escape[92] = cfg->escapes[33];
+    cfg->char2escape[127] = cfg->escapes[34];
+#endif
 }
 
 /* ===== ENCODING ===== */
@@ -259,31 +331,6 @@ static void json_encode_exception(lua_State *l, int lindex, const char *reason)
                   lua_typename(l, lua_type(l, lindex)), reason);
 }
 
-/* JSON escape a character if required, or return NULL */
-static inline char *json_escape_char(int c)
-{
-    switch(c) {
-    case 0:
-        return "\\u0000";
-    case '\\':
-        return "\\\\";
-    case '"':
-        return "\\\"";
-    case '\b':
-        return "\\b";
-    case '\t':
-        return "\\t";
-    case '\n':
-        return "\\n";
-    case '\f':
-        return "\\f";
-    case '\r':
-        return "\\r";
-    }
-
-    return NULL;
-}
-
 /* json_append_string args:
  * - lua_State
  * - JSON strbuf
@@ -292,7 +339,7 @@ static inline char *json_escape_char(int c)
  * Returns nothing. Doesn't remove string from Lua stack */
 static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
 {
-    const char *p;
+    const char *escstr;
     int i;
     const char *str;
     size_t len;
@@ -307,9 +354,9 @@ static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
 
     strbuf_append_char_unsafe(json, '\"');
     for (i = 0; i < len; i++) {
-        p = json_escape_char(str[i]);
-        if (p)
-            strbuf_append_string(json, p);
+        escstr = char2escape[(unsigned char)str[i]];
+        if (escstr)
+            strbuf_append_string(json, escstr);
         else
             strbuf_append_char_unsafe(json, str[i]);
     }
@@ -625,7 +672,7 @@ static void json_set_token_error(json_token_t *token, json_parse_t *json,
 
 static void json_next_string_token(json_parse_t *json, json_token_t *token)
 {
-    char *ch2escape = json->cfg->ch2escape;
+    char *escape2char = json->cfg->escape2char;
     char ch;
 
     /* Caller must ensure a string is next */
@@ -650,7 +697,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
             ch = json->data[json->index + 1];
 
             /* Translate escape code and append to tmp string */
-            ch = ch2escape[(unsigned char)ch];
+            ch = escape2char[(unsigned char)ch];
             if (ch == 'u') {
                 if (json_append_unicode_escape(json) == 0)
                     continue;
