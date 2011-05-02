@@ -175,13 +175,6 @@ void strbuf_resize(strbuf_t *s, int len)
     s->reallocs++;
 }
 
-void strbuf_append_mem(strbuf_t *s, const char *c, int len)
-{
-    strbuf_ensure_empty_length(s, len);
-    memcpy(s->buf + s->length, c, len);
-    s->length += len;
-}
-
 void strbuf_append_string(strbuf_t *s, const char *str)
 {
     int space, i;
@@ -198,6 +191,24 @@ void strbuf_append_string(strbuf_t *s, const char *str)
         s->length++;
         space--;
     }
+}
+
+void strbuf_append_number(strbuf_t *s, double number)
+{
+    int len;
+
+    /* Lowest double printed with %.14g is 21 characters long:
+     * -1.7976931348623e+308
+     *
+     * Use 32 to include the \0, and a few extra just in case..
+     */
+    strbuf_ensure_empty_length(s, 32);
+
+    len = sprintf(s->buf + s->length, "%.14g", number);
+    if (len < 0)
+        die("BUG: Unable to convert number");  /* This should never happen.. */
+
+    s->length += len;
 }
 
 void strbuf_append_fmt(strbuf_t *s, const char *fmt, ...)

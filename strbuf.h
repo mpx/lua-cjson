@@ -66,8 +66,9 @@ static  void strbuf_ensure_empty_length(strbuf_t *s, int len);
 
 /* Update */
 extern void strbuf_append_fmt(strbuf_t *s, const char *format, ...);
-extern void strbuf_append_mem(strbuf_t *s, const char *c, int len);
+static void strbuf_append_mem(strbuf_t *s, const char *c, int len);
 extern void strbuf_append_string(strbuf_t *s, const char *str);
+extern void strbuf_append_number(strbuf_t *s, double number);
 static void strbuf_append_char(strbuf_t *s, const char c);
 static void strbuf_ensure_null(strbuf_t *s);
 
@@ -98,6 +99,13 @@ static inline void strbuf_append_char(strbuf_t *s, const char c)
 static inline void strbuf_append_char_unsafe(strbuf_t *s, const char c)
 {
     s->buf[s->length++] = c;
+}
+
+static inline void strbuf_append_mem(strbuf_t *s, const char *c, int len)
+{
+    strbuf_ensure_empty_length(s, len);
+    memcpy(s->buf + s->length, c, len);
+    s->length += len;
 }
 
 static inline void strbuf_ensure_null(strbuf_t *s)
