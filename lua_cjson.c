@@ -558,7 +558,7 @@ static int json_encode(lua_State *l)
 
     /* Reset persistent encode_buf. Avoids temporary allocation
      * for a single call. */
-    cfg->encode_buf.length = 0;
+    strbuf_reset(&cfg->encode_buf);
     json_append_data(l, cfg, &cfg->encode_buf);
     json = strbuf_string(&cfg->encode_buf, &len);
 
@@ -683,7 +683,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
 
     /* json->tmp is the temporary strbuf used to accumulate the
      * decoded string value. */
-    json->tmp->length = 0;
+    strbuf_reset(json->tmp);
     while ((ch = json->data[json->index]) != '"') {
         if (!ch) {
             /* Premature end of the string */

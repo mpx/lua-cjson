@@ -72,6 +72,12 @@ extern void strbuf_append_number(strbuf_t *s, double number);
 static void strbuf_append_char(strbuf_t *s, const char c);
 static void strbuf_ensure_null(strbuf_t *s);
 
+/* Reset string for before use */
+static inline void strbuf_reset(strbuf_t *s)
+{
+    s->length = 0;
+}
+
 /* Return bytes remaining in the string buffer
  * Ensure there is space for a NULL terminator. */
 static inline int strbuf_empty_length(strbuf_t *s)
