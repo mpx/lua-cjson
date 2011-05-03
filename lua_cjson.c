@@ -25,15 +25,13 @@
 /* Caveats:
  * - JSON "null" values are represented as lightuserdata since Lua
  *   tables cannot contain "nil". Compare with cjson.null.
- * - Only standard JSON escapes and \u0000 are used when encoding
- *   JSON. Most unprintable characters are not escaped.
  * - Invalid UTF-8 characters are not detected and will be passed
  *   untouched.
  * - Javascript comments are not part of the JSON spec, and are not
  *   supported.
  *
- * Note: Decoding is slower than encoding. Lua probably spends
- *       significant time rehashing tables when parsing JSON since it is
+ * Note: Decoding is slower than encoding. Lua spends significant
+ *       time (30%) managing tables when parsing JSON since it is
  *       difficult to know object/array sizes ahead of time.
  */
 
@@ -655,8 +653,8 @@ static int json_append_unicode_escape(json_parse_t *json)
         return -1;
     }
 
-    /* Append bytes and advance counter */
-    strbuf_append_mem(json->tmp, utf8, len);
+    /* Append bytes and advance index */
+    strbuf_append_mem_unsafe(json->tmp, utf8, len);
     json->index += 6;
 
     return 0;
@@ -716,7 +714,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
         }
         /* Append normal character or translated single character
          * Unicode escapes are handled above */
-        strbuf_append_char(json->tmp, ch);
+        strbuf_append_char_unsafe(json->tmp, ch);
         json->index++;
     }
     json->index++;  /* Eat final quote (") */
@@ -1000,7 +998,7 @@ static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *t
 }
 
 /* json_text must be null terminated string */
-static void lua_json_decode(lua_State *l, const char *json_text)
+static void lua_json_decode(lua_State *l, const char *json_text, int json_len)
 {
     json_parse_t json;
     json_token_t token;
@@ -1008,7 +1006,11 @@ static void lua_json_decode(lua_State *l, const char *json_text)
     json.cfg = json_fetch_config(l);
     json.data = json_text;
     json.index = 0;
-    json.tmp = strbuf_new(0);
+
+    /* Ensure the temporary buffer can hold the entire string.
+     * This means we no longer need to do length checks since the decoded
+     * string must be smaller than the entire json string */
+    json.tmp = strbuf_new(json_len);
 
     json_next_token(&json, &token);
     json_process_value(l, &json, &token);
@@ -1025,11 +1027,12 @@ static void lua_json_decode(lua_State *l, const char *json_text)
 static int json_decode(lua_State *l)
 {
     const char *json;
+    size_t len;
 
     luaL_argcheck(l, lua_gettop(l) <= 1, 2, "found too many arguments");
-    json = luaL_checkstring(l, 1);
+    json = luaL_checklstring(l, 1, &len);
 
-    lua_json_decode(l, json);
+    lua_json_decode(l, json, len);
 
     return 1;
 }
