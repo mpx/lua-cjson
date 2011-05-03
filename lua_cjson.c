@@ -732,6 +732,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
  * - numbers starting with '+'
  * - NaN, -NaN, infinity, -infinity
  * - hexidecimal numbers
+ * - numbers with leading zeros
  *
  * json_is_invalid_number() detects "numbers" which may pass strtod()'s
  * error checking, but should not be allowed with strict JSON.
@@ -742,25 +743,33 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
 static int json_is_invalid_number(json_parse_t *json)
 {
     int i = json->index;
-    char ch;
 
     /* Reject numbers starting with + */
     if (json->data[i] == '+')
         return 1;
 
+    /* Skip minus sign if it exists */
     if (json->data[i] == '-')
         i++;
 
-    /* Reject numbers starting with 0x, pass other numbers starting
-     * with 0 */
-    if (json->data[i] == '0')
-        return ((json->data[i + 1] | 0x20) == 'x');
+    /* Reject numbers starting with 0x, or leading zeros */
+    if (json->data[i] == '0') {
+        int ch2 = json->data[i + 1];
+
+        if ((ch2 | 0x20) == 'x' ||          /* Hex */
+            ('0' <= ch2 && ch2 <= '9'))     /* Leading zero */
+            return 1;
+
+        return 0;
+    } else if (json->data[i] <= '9') {
+        return 0;                           /* Ordinary number */
+    }
+
 
     /* Reject inf/nan */
-    ch = json->data[i] | 0x20;
-    if (ch == 'i' && !strncasecmp(&json->data[i], "inf", 3))
+    if (!strncasecmp(&json->data[i], "inf", 3))
         return 1;
-    if (ch == 'n' && !strncasecmp(&json->data[i], "nan", 3))
+    if (!strncasecmp(&json->data[i], "nan", 3))
         return 1;
 
     /* Pass all other numbers which may still be invalid, but
