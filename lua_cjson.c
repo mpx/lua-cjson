@@ -235,12 +235,32 @@ static int json_strict_numbers(lua_State *l)
     return 1;
 }
 
+static int json_destroy_config(lua_State *l)
+{
+    json_config_t *cfg;
+    
+    cfg = lua_touserdata(l, 1);
+    if (cfg)
+        strbuf_free(&cfg->encode_buf);
+    cfg = NULL;
+
+    return 0;
+}
+
 static void json_create_config(lua_State *l)
 {
     json_config_t *cfg;
     int i;
 
     cfg = lua_newuserdata(l, sizeof(*cfg));
+
+    /* Create GC method to clean up strbuf */
+    lua_newtable(l);
+    lua_pushcfunction(l, json_destroy_config);
+    lua_setfield(l, -2, "__gc");
+    lua_setmetatable(l, -2);
+
+    strbuf_init(&cfg->encode_buf, 0);
 
     cfg->sparse_ratio = DEFAULT_SPARSE_RATIO;
     cfg->max_depth = DEFAULT_MAX_DEPTH;
@@ -291,9 +311,6 @@ static void json_create_config(lua_State *l)
     cfg->escape2char['r'] = '\r';
     cfg->escape2char['u'] = 'u';          /* Unicode parsing required */
 
-    /* Encoding init */
-
-    strbuf_init(&cfg->encode_buf, 0);
 
 #if 0
     /* Initialise separate storage for pre-generated escape codes.
