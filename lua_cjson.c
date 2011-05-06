@@ -123,7 +123,7 @@ static const char *char2escape[256] = {
     "\\u0018", "\\u0019", "\\u001a", "\\u001b",
     "\\u001c", "\\u001d", "\\u001e", "\\u001f",
     NULL, NULL, "\\\"", NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, "\\/",
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
