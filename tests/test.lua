@@ -122,11 +122,17 @@ local ascii2 = json.decode(json.encode(ascii))
 print("8bit clean encode/decode: " .. tostring(ascii1 ~= ascii2))
 
 for i = 1, #arg do
-    print(arg[i] .. " enc->dec..")
     local obj1 = json.decode(file_load(arg[i]))
     local obj2 = json.decode(json.encode(obj1))
-    -- obj_compare(obj_json1, obj_json2)
-    print(".. unimplemented")
+    if compare_values(obj, obj) then
+        print(arg[i] .. ": PASS")
+    else
+        print(arg[i] .. ": FAIL")
+        print("== obj1 ==")
+        dump_value(obj1)
+        print("== obj2 ==")
+        dump_value(obj2)
+    end
 end
 
 -- vi:ai et sw=4 ts=4:

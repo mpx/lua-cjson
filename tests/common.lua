@@ -76,4 +76,35 @@ function benchmark(tests, iter, rep)
     return test_results
 end
 
+function compare_values(val1, val2)
+    local type1 = type(val1)
+    local type2 = type(val2)
+    if type1 ~= type2 then
+        return false
+    end
+    if type1 ~= "table" then
+        return val1 == val2
+    end
+    local val1_keys = {}
+    -- Note all the keys in val1 need to be checked
+    for k, _ in pairs(val1) do
+        check_keys[k] = true
+    end
+    for k, v in pairs(val2) do
+        if not check_keys[k] then
+            -- Key didn't exist in val1
+            return false
+        end
+        if not compare_value(val1[k], val2[k]) then
+            return false
+        end
+        check_keys[k] = nil
+    end
+    for k, _ in pairs(check_keys) do
+        -- Not the same if any keys left to check
+        return false
+    end
+    return true
+end
+
 -- vi:ai et sw=4 ts=4:
