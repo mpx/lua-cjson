@@ -89,34 +89,18 @@ local encode_simple_tests = {
     { json.encode, { "hello" }, true, { '"hello"' } },
 }
 
-function test_ascii_sweep(min, max)
-    local function gen_ascii()
-        local chars = {}
-        for i = min, max do
-            chars[i + 1] = string.char(i)
-        end
-        return table.concat(chars)
-    end
-
-    local ascii_raw = gen_ascii()
-    local ascii_raw2 = json.decode(json.encode(ascii_raw))
-
-    if ascii_raw == ascii_raw2 then
-        return "clean"
-    else
-        return "failed ascii sweep test"
-    end
+local function gen_ascii()
+    local chars = {}
+    for i = 0, 255 do chars[i + 1] = string.char(i) end
+    return table.concat(chars)
 end
 
+local octets_raw = gen_ascii()
+local octets_escaped = file_load("bytestring.dat")
 local escape_tests = {
-    { test_ascii_sweep, { 0, 255 }, true, { 'clean' } },
+    { json.encode, { octets_raw }, true, { octets_escaped } },
+    { json.decode, { octets_escaped }, true, { octets_raw } }
 }
-
-function test_decode_cycle(filename)
-    local obj1 = json.decode(file_load(filename))
-    local obj2 = json.decode(json.encode(obj1))
-    return compare_values(obj1, obj2)
-end
 
 run_test_group("decode simple value", simple_value_tests)
 run_test_group("decode numeric", numeric_tests)
