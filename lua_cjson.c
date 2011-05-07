@@ -43,8 +43,12 @@
 
 #include "strbuf.h"
 
+#define DEFAULT_SPARSE_CONVERT 0
 #define DEFAULT_SPARSE_RATIO 2
+#define DEFAULT_SPARSE_SAFE 10
 #define DEFAULT_MAX_DEPTH 20
+#define DEFAULT_ENCODE_REFUSE_BADNUM 1
+#define DEFAULT_DECODE_REFUSE_BADNUM 0
 
 typedef enum {
     T_OBJ_BEGIN,
@@ -89,10 +93,14 @@ typedef struct {
     char *char2escape[256]; /* Encoding */
 #endif
     strbuf_t encode_buf;
-    int sparse_ratio;
-    int max_depth;
     int current_depth;
-    int strict_numbers;
+
+    int encode_sparse_convert;
+    int encode_sparse_ratio;
+    int encode_sparse_safe;
+    int encode_max_depth;
+    int encode_refuse_badnum;
+    int decode_refuse_badnum;
 } json_config_t;
 
 typedef struct {  
@@ -171,66 +179,107 @@ static json_config_t *json_fetch_config(lua_State *l)
     return cfg;
 }
 
-/* Checks whether a config variable needs to be updated.
- * Also return cfg pointer */
-static int cfg_update_requested(lua_State *l, json_config_t **cfg)
+static void json_verify_arg_count(lua_State *l, int args)
 {
-    int args;
-
-    args = lua_gettop(l);
-    luaL_argcheck(l, args <= 1, 2, "found too many arguments");
-
-    *cfg = json_fetch_config(l);
-
-    return args;
+    luaL_argcheck(l, lua_gettop(l) <= args, args + 1,
+                  "found too many arguments");
 }
 
-static int json_sparse_ratio(lua_State *l)
+/* Configures handling of extremely sparse arrays:
+ * convert: Convert extremely sparse arrays into objects? Otherwise error.
+ * ratio: 0: always allow sparse; 1: never allow sparse; >1: use ratio
+ * safe: Always use an array when the max index <= safe */
+static int json_cfg_encode_sparse_array(lua_State *l)
 {
     json_config_t *cfg;
-    int sparse_ratio;
+    int val;
 
-    if (cfg_update_requested(l, &cfg)) {
-        sparse_ratio = luaL_checkinteger(l, 1);
-        luaL_argcheck(l, sparse_ratio >= 0, 1,
-                      "expected zero or positive integer");
-        cfg->sparse_ratio = sparse_ratio;
-    }
+    json_verify_arg_count(l, 3);
+    cfg = json_fetch_config(l);
 
-    lua_pushinteger(l, cfg->sparse_ratio);
-
-    return 1;
-}
-
-static int json_max_depth(lua_State *l)
-{
-    json_config_t *cfg;
-    int max_depth;
-
-    if (cfg_update_requested(l, &cfg)) {
-        max_depth = luaL_checkinteger(l, 1);
-        luaL_argcheck(l, max_depth > 0, 1, "expected positive integer");
-        cfg->max_depth = max_depth;
-    }
-
-    lua_pushinteger(l, cfg->max_depth);
-
-    return 1;
-}
-
-/* When disabled, supports:
- * - encoding/decoding NaN/Infinity.
- * - decoding hexidecimal numbers. */
-static int json_strict_numbers(lua_State *l)
-{
-    json_config_t *cfg;
-
-    if (cfg_update_requested(l, &cfg)) {
+    switch (lua_gettop(l)) {
+    case 3:
+        val = luaL_checkinteger(l, 3);
+        luaL_argcheck(l, val >= 0, 3, "expected integer >= 0");
+        cfg->encode_sparse_safe = val;
+    case 2:
+        val = luaL_checkinteger(l, 2);
+        luaL_argcheck(l, val >= 0, 2, "expected integer >= 0");
+        cfg->encode_sparse_ratio = val;
+    case 1:
         luaL_argcheck(l, lua_isboolean(l, 1), 1, "expected boolean");
-        cfg->strict_numbers = lua_toboolean(l, 1);
+        cfg->encode_sparse_convert = lua_toboolean(l, 1);
     }
 
-    lua_pushboolean(l, cfg->strict_numbers);
+    lua_pushboolean(l, cfg->encode_sparse_convert);
+    lua_pushinteger(l, cfg->encode_sparse_ratio);
+    lua_pushinteger(l, cfg->encode_sparse_safe);
+
+    return 3;
+}
+
+/* Configures the maximum number of nested arrays/objects allowed when
+ * encoding */
+static int json_cfg_encode_max_depth(lua_State *l)
+{
+    json_config_t *cfg;
+    int depth;
+
+    json_verify_arg_count(l, 1);
+    cfg = json_fetch_config(l);
+
+    if (lua_gettop(l)) {
+        depth = luaL_checkinteger(l, 1);
+        luaL_argcheck(l, depth > 0, 1, "expected positive integer");
+        cfg->encode_max_depth = depth;
+    }
+
+    lua_pushinteger(l, cfg->encode_max_depth);
+
+    return 1;
+}
+
+
+/* On argument: decode enum and set config variables
+ * **options must point to a NULL terminated array of 4 enums
+ * Returns: current enum value */
+static void json_enum_option(lua_State *l, const char **options,
+                             int *opt1, int *opt2)
+{
+    int setting;
+
+    if (lua_gettop(l)) {
+        if (lua_isboolean(l, 1))
+            setting = lua_toboolean(l, 1) * 3;
+        else
+            setting = luaL_checkoption(l, 1, NULL, options);
+
+        *opt1 = setting & 1 ? 1 : 0;
+        *opt2 = setting & 2 ? 1 : 0;
+    } else {
+        setting = *opt1 | (*opt2 << 1);
+    }
+
+    if (setting)
+        lua_pushstring(l, options[setting]);
+    else
+        lua_pushboolean(l, 0);
+}
+
+
+/* When enabled, rejects: NaN, Infinity, hexidecimal numbers */
+static int json_cfg_refuse_invalid_numbers(lua_State *l)
+{
+    static const char *options_enc_dec[] = { "none", "encode", "decode",
+                                             "both", NULL };
+    json_config_t *cfg;
+
+    json_verify_arg_count(l, 1);
+    cfg = json_fetch_config(l);
+
+    json_enum_option(l, options_enc_dec,
+                     &cfg->encode_refuse_badnum,
+                     &cfg->decode_refuse_badnum);
 
     return 1;
 }
@@ -262,9 +311,12 @@ static void json_create_config(lua_State *l)
 
     strbuf_init(&cfg->encode_buf, 0);
 
-    cfg->sparse_ratio = DEFAULT_SPARSE_RATIO;
-    cfg->max_depth = DEFAULT_MAX_DEPTH;
-    cfg->strict_numbers = 1;
+    cfg->encode_sparse_convert = DEFAULT_SPARSE_CONVERT;
+    cfg->encode_sparse_ratio = DEFAULT_SPARSE_RATIO;
+    cfg->encode_sparse_safe = DEFAULT_SPARSE_SAFE;
+    cfg->encode_max_depth = DEFAULT_MAX_DEPTH;
+    cfg->encode_refuse_badnum = DEFAULT_ENCODE_REFUSE_BADNUM;
+    cfg->decode_refuse_badnum = DEFAULT_DECODE_REFUSE_BADNUM;
 
     /* Decoding init */
 
@@ -382,7 +434,7 @@ static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
  * -1   object (not a pure array)
  * >=0  elements in array
  */
-static int lua_array_length(lua_State *l, int sparse_ratio)
+static int lua_array_length(lua_State *l, json_config_t *cfg)
 {
     double k;
     int max;
@@ -413,8 +465,14 @@ static int lua_array_length(lua_State *l, int sparse_ratio)
     }
 
     /* Encode very sparse arrays as objects (if enabled) */
-    if (sparse_ratio > 0 && max > items * sparse_ratio)
+    if (cfg->encode_sparse_ratio > 0 &&
+        max > items * cfg->encode_sparse_ratio &&
+        max > cfg->encode_sparse_safe) {
+        if (!cfg->encode_sparse_convert)
+            json_encode_exception(l, -1, "excessively sparse array");
+
         return -1;
+    }
 
     return max;
 }
@@ -423,7 +481,7 @@ static void json_encode_descend(lua_State *l, json_config_t *cfg)
 {
     cfg->current_depth++;
 
-    if (cfg->current_depth > cfg->max_depth) {
+    if (cfg->current_depth > cfg->encode_max_depth) {
         luaL_error(l, "Cannot serialise, excessive nesting (%d)",
                    cfg->current_depth);
     }
@@ -462,11 +520,11 @@ static void json_append_array(lua_State *l, json_config_t *cfg, strbuf_t *json,
 }
 
 static void json_append_number(lua_State *l, strbuf_t *json, int index,
-                               int strict)
+                               int refuse_badnum)
 {
     double num = lua_tonumber(l, index);
 
-    if (strict && (isinf(num) || isnan(num)))
+    if (refuse_badnum && (isinf(num) || isnan(num)))
         json_encode_exception(l, index, "must not be NaN or Inf");
 
     strbuf_append_number(json, num);
@@ -497,7 +555,7 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
             /* Can't just use json_append_string() below since it would
              * convert the value in the callers data structure. */
             strbuf_append_char(json, '"');
-            json_append_number(l, json, -2, cfg->strict_numbers);
+            json_append_number(l, json, -2, cfg->encode_refuse_badnum);
             strbuf_append_mem(json, "\": ", 3);
         } else if (keytype == LUA_TSTRING) {
             json_append_string(l, json, -2);
@@ -529,7 +587,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
         json_append_string(l, json, -1);
         break;
     case LUA_TNUMBER:
-        json_append_number(l, json, -1, cfg->strict_numbers);
+        json_append_number(l, json, -1, cfg->encode_refuse_badnum);
         break;
     case LUA_TBOOLEAN:
         if (lua_toboolean(l, -1))
@@ -538,7 +596,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
             strbuf_append_mem(json, "false", 5);
         break;
     case LUA_TTABLE:
-        len = lua_array_length(l, cfg->sparse_ratio);
+        len = lua_array_length(l, cfg);
         if (len > 0)
             json_append_array(l, cfg, json, len);
         else
@@ -566,6 +624,8 @@ static int json_encode(lua_State *l)
     char *json;
     int len;
 
+    /* Can't use json_verify_arg_count() since we need to ensure
+     * there is only 1 argument */
     luaL_argcheck(l, lua_gettop(l) == 1, 1, "expected 1 argument");
 
     cfg = json_fetch_config(l);
@@ -853,7 +913,7 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         json_next_string_token(json, token);
         return;
     } else if (ch == '-' || ('0' <= ch && ch <= '9')) {
-        if (json->cfg->strict_numbers && json_is_invalid_number(json)) {
+        if (json->cfg->decode_refuse_badnum && json_is_invalid_number(json)) {
             json_set_token_error(token, json, "invalid number");
             return;
         }
@@ -873,8 +933,9 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         token->type = T_NULL;
         json->index += 4;
         return;
-    } else if (!json->cfg->strict_numbers && json_is_invalid_number(json)) {
-        /* When strict_numbers is disabled, only attempt to process
+    } else if (!json->cfg->decode_refuse_badnum &&
+               json_is_invalid_number(json)) {
+        /* When refuse_badnum is disabled, only attempt to process
          * numbers we know are invalid JSON (Inf, NaN, hex)
          * This is required to generate an appropriate token error,
          * otherwise all bad tokens will register as "invalid number"
@@ -1055,7 +1116,8 @@ static int json_decode(lua_State *l)
     const char *json;
     size_t len;
 
-    luaL_argcheck(l, lua_gettop(l) <= 1, 2, "found too many arguments");
+    json_verify_arg_count(l, 1);
+
     json = luaL_checklstring(l, 1, &len);
 
     lua_json_decode(l, json, len);
@@ -1070,9 +1132,9 @@ int luaopen_cjson(lua_State *l)
     luaL_Reg reg[] = {
         { "encode", json_encode },
         { "decode", json_decode },
-        { "sparse_ratio", json_sparse_ratio },
-        { "max_depth", json_max_depth },
-        { "strict_numbers", json_strict_numbers },
+        { "encode_sparse_array", json_cfg_encode_sparse_array },
+        { "encode_max_depth", json_cfg_encode_max_depth },
+        { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
         { NULL, NULL }
     };
 
