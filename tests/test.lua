@@ -1,5 +1,9 @@
 #!/usr/bin/env lua
 
+-- CJSON tests
+--
+-- Mark Pulford <mark@kyne.com.au>
+
 require "common"
 local json = require "cjson"
 

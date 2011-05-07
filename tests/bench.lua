@@ -3,11 +3,11 @@
 -- Simple JSON benchmark.
 --
 -- Your Mileage May Vary.
+--
+-- Mark Pulford <mark@kyne.com.au>
 
 require "common"
 local json = require "cjson"
---local json = require "json"
---local json = require "dkjson"
 
 function bench_file(filename)
     local data_json = file_load(filename)
@@ -28,12 +28,11 @@ function bench_file(filename)
     return benchmark(tests, 5000, 5)
 end
 
-i = 1
-while arg[i] do
-    local results = {}
-    results[arg[i]] = bench_file(arg[i])
-    dump_value(results)
-    i = i + 1
+for i = 1, #arg do
+    local results = bench_file(arg[i])
+    for k, v in pairs(results) do
+        print(string.format("%s: %s: %d", arg[i], k, v))
+    end
 end
 
 -- vi:ai et sw=4 ts=4:
