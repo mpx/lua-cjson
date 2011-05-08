@@ -39,7 +39,7 @@ rm -rf "$RPM_BUILD_ROOT"
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE NEWS performance.txt README rfc4627.txt tests
+%doc LICENSE NEWS performance.txt README rfc4627.txt tests TODO
 %{lualibdir}/*
 
 
