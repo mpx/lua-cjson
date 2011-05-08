@@ -99,6 +99,10 @@ function file_load(filename)
     local data = file:read("*a")
     file:close()
 
+    if data == nil then
+        error("Failed to read " .. filename)
+    end
+
     return data
 end
 

@@ -3,6 +3,8 @@
 -- CJSON tests
 --
 -- Mark Pulford <mark@kyne.com.au>
+--
+-- Note: The output of this script is easier to read with "less -S"
 
 require "common"
 local json = require "cjson"
@@ -95,12 +97,72 @@ local function gen_ascii()
     return table.concat(chars)
 end
 
+-- Generate every UTF-16 codepoint, including supplementary codes
+local function gen_utf16_escaped()
+    -- Create raw table escapes
+    local utf16_escaped = {}
+    local count = 0
+
+    local function append_escape(code)
+        local esc = string.format('\\u%04X', code)
+        table.insert(utf16_escaped, esc)
+    end
+
+    table.insert(utf16_escaped, '"')
+    for i = 0, 0xD7FF do
+        append_escape(i)
+    end
+    -- Skip 0xD800 - 0xDFFF since they are used to encode supplementary
+    -- codepoints
+    for i = 0xE000, 0xFFFF do
+        append_escape(i)
+    end
+    -- Append surrogate pair for each supplementary codepoint
+    for high = 0xD800, 0xDBFF do
+        for low = 0xDC00, 0xDFFF do
+            append_escape(high)
+            append_escape(low)
+        end
+    end
+    table.insert(utf16_escaped, '"')
+   
+    return table.concat(utf16_escaped)
+end
+
 local octets_raw = gen_ascii()
-local octets_escaped = file_load("bytestring.dat")
+local octets_escaped = file_load("octets-escaped.dat")
+local utf8_loaded, utf8_raw = pcall(file_load, "utf8.dat")
+if not utf8_loaded then
+    utf8_raw = "Failed to load utf8.dat"
+end
+local utf16_escaped = gen_utf16_escaped()
+
 local escape_tests = {
+    -- Test 8bit clean
     { json.encode, { octets_raw }, true, { octets_escaped } },
-    { json.decode, { octets_escaped }, true, { octets_raw } }
+    { json.decode, { octets_escaped }, true, { octets_raw } },
+    -- Ensure high bits are removed from surrogate codes
+    { json.decode, { '"\\uF800"' }, true, { "\239\160\128" } },
+    -- Test inverted surrogate pairs
+    { json.decode, { '"\\uDB00\\uD800"' },
+      false, { "Expected value but found invalid unicode escape code at character 2" } },
+    -- Test 2x high surrogate code units
+    { json.decode, { '"\\uDB00\\uDB00"' },
+      false, { "Expected value but found invalid unicode escape code at character 2" } },
+    -- Test invalid 2nd escape
+    { json.decode, { '"\\uDB00\\"' },
+      false, { "Expected value but found invalid unicode escape code at character 2" } },
+    { json.decode, { '"\\uDB00\\uD"' },
+      false, { "Expected value but found invalid unicode escape code at character 2" } },
+    -- Test decoding of all UTF-16 escapes
+    { json.decode, { utf16_escaped }, true, { utf8_raw } }
 }
+
+function test_decode_cycle(filename)
+    local obj1 = json.decode(file_load(filename))
+    local obj2 = json.decode(json.encode(obj1))
+    return compare_values(obj1, obj2)
+end
 
 run_test_group("decode simple value", simple_value_tests)
 run_test_group("decode numeric", numeric_tests)
