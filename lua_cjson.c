@@ -552,8 +552,6 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         /* table, key, value */
         keytype = lua_type(l, -2);
         if (keytype == LUA_TNUMBER) {
-            /* Can't just use json_append_string() below since it would
-             * convert the value in the callers data structure. */
             strbuf_append_char(json, '"');
             json_append_number(l, json, -2, cfg->encode_refuse_badnum);
             strbuf_append_mem(json, "\": ", 3);
@@ -644,9 +642,10 @@ static int json_encode(lua_State *l)
 
 /* ===== DECODING ===== */
 
-static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *token);
+static void json_process_value(lua_State *l, json_parse_t *json,
+                               json_token_t *token);
 
-static inline int hexdigit2int(char hex)
+static int hexdigit2int(char hex)
 {
     if ('0' <= hex  && hex <= '9')
         return hex - '0';
@@ -952,7 +951,7 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
     /* Process characters which triggered T_UNKNOWN */
     ch = json->data[json->index];
 
-    /* Must use strncmp() to match the front of the JSON string
+    /* Must use strncmp() to match the front of the JSON string.
      * JSON identifier must be lowercase.
      * When strict_numbers if disabled, either case is allowed for
      * Infinity/NaN (since we are no longer following the spec..) */
@@ -1055,9 +1054,8 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 
         json_next_token(json, &token);
 
-        if (token.type == T_OBJ_END) {
+        if (token.type == T_OBJ_END)
             return;
-        }
 
         if (token.type != T_COMMA)
             json_throw_parse_error(l, json, "comma or object end", &token);
@@ -1081,9 +1079,8 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
     json_next_token(json, &token);
 
     /* Handle empty arrays */
-    if (token.type == T_ARR_END) {
+    if (token.type == T_ARR_END)
         return;
-    }
 
     for (i = 1; ; i++) {
         json_process_value(l, json, &token);
@@ -1091,9 +1088,8 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
         json_next_token(json, &token);
 
-        if (token.type == T_ARR_END) {
+        if (token.type == T_ARR_END)
             return;
-        }
 
         if (token.type != T_COMMA)
             json_throw_parse_error(l, json, "comma or array end", &token);
@@ -1103,7 +1099,8 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 }
 
 /* Handle the "value" context */
-static void json_process_value(lua_State *l, json_parse_t *json, json_token_t *token) 
+static void json_process_value(lua_State *l, json_parse_t *json,
+                               json_token_t *token) 
 {
     switch (token->type) {
     case T_STRING:
