@@ -64,6 +64,10 @@ local encode_table_tests = {
 }
 
 local decode_error_tests = {
+    { json.decode, { '\0"\0"' },
+      false, { "JSON parser does not support UTF-16 or UTF-32" } },
+    { json.decode, { '"\0"\0' },
+      false, { "JSON parser does not support UTF-16 or UTF-32" } },
     { json.decode, { '{ "unexpected eof": ' },
       false, { "Expected value but found T_END at character 21" } },
     { json.decode, { '{ "extra data": true }, false' },
