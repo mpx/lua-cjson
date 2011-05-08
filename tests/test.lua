@@ -63,6 +63,9 @@ if not utf8_loaded then
 end
 local utf16_escaped = gen_utf16_escaped()
 local nested5 = {{{{{ "nested" }}}}}
+local table_cycle = {}
+local table_cycle2 = { table_cycle }
+table_cycle[1] = table_cycle2
 
 local decode_simple_tests = {
     { json.decode, { '"test string"' }, true, { "test string" } },
@@ -124,6 +127,8 @@ local encode_table_tests = {
 
     { json.encode, { nested5 }, true, { '[ [ [ [ [ "nested" ] ] ] ] ]' } },
     { json.encode, { { nested5 } },
+      false, { "Cannot serialise, excessive nesting (6)" } },
+    { json.encode, { table_cycle },
       false, { "Cannot serialise, excessive nesting (6)" } }
 }
 

@@ -29,7 +29,7 @@ function is_array(table)
     return max
 end
 
-function serialise_table(value, indent)
+function serialise_table(value, indent, depth)
     local spacing, spacing2, indent2
     if indent then 
         spacing = "\n" .. indent
@@ -37,6 +37,10 @@ function serialise_table(value, indent)
         indent2 = indent .. "  "
     else
         spacing, spacing2, indent2 = " ", " ", false
+    end
+    depth = depth + 1
+    if depth > 50 then
+        return "ERROR: Too many nested tables"
     end
 
     local max = is_array(value)
@@ -49,7 +53,7 @@ function serialise_table(value, indent)
             if comma then
                 table.insert(fragment, "," .. spacing2)
             end
-            table.insert(fragment, serialise_value(value[i], indent2))
+            table.insert(fragment, serialise_value(value[i], indent2, depth))
             comma = true
         end
     elseif max < 0 then
@@ -59,8 +63,8 @@ function serialise_table(value, indent)
                 table.insert(fragment, "," .. spacing2)
             end
             table.insert(fragment, string.format(
-                "[%s] = %s", serialise_value(k, indent2),
-                             serialise_value(v, indent2))
+                "[%s] = %s", serialise_value(k, indent2, depth),
+                             serialise_value(v, indent2, depth))
             )
             comma = true
         end
@@ -70,8 +74,9 @@ function serialise_table(value, indent)
     return table.concat(fragment)
 end
 
-function serialise_value(value, indent)
+function serialise_value(value, indent, depth)
     if indent == nil then indent = "" end
+    if depth == nil then depth = 0 end
 
     if value == cjson.null then
         return "cjson.null"
@@ -81,7 +86,7 @@ function serialise_value(value, indent)
            type(value) == "boolean" then
         return tostring(value)
     elseif type(value) == "table" then
-        return serialise_table(value, indent)
+        return serialise_table(value, indent, depth)
     else
         return "\"<" .. type(value) .. ">\""
     end
