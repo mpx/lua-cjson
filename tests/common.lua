@@ -128,12 +128,13 @@ end
 
 function benchmark(tests, iter, rep)
     local function bench(func, iter)
-        collectgarbage("collect")
+        collectgarbage("stop")
         local t = gettimeofday()
         for i = 1, iter do
             func(i)
         end
         t = gettimeofday() - t
+        collectgarbage("restart")
         return (iter / t)
     end
 
