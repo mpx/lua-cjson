@@ -2,7 +2,7 @@
 %define lualibdir %{_libdir}/lua/%{luaver}
 
 Name:		lua-cjson
-Version:	1.0
+Version:	1.0.1
 Release:	1%{?dist}
 Summary:	JSON support for the Lua language
 
