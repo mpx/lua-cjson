@@ -83,7 +83,7 @@ local encode_simple_tests = {
     { json.encode, { json.null }, true, { 'null' } },
     { json.encode, { true }, true, { 'true' } },
     { json.encode, { false }, true, { 'false' } },
-    { json.encode, { { } }, true, { '{  }' } },
+    { json.encode, { { } }, true, { '{}' } },
     { json.encode, { 10 }, true, { '10' } },
     { json.encode, { NaN },
       false, { "Cannot serialise number: must not be NaN or Inf" } },
@@ -117,15 +117,15 @@ local encode_table_tests = {
         return "Setting sparse array (true, 2, 3) / max depth (5)"
     end,
     { json.encode, { { [3] = "sparse test" } },
-      true, { '[ null, null, "sparse test" ]' } },
+      true, { '[null,null,"sparse test"]' } },
 
     { json.encode, { { [1] = "one", [4] = "sparse test" } },
-      true, { '[ "one", null, null, "sparse test" ]' } }, 
+      true, { '["one",null,null,"sparse test"]' } }, 
 
     { json.encode, { { [1] = "one", [5] = "sparse test" } },
-      true, { '{ "1": "one", "5": "sparse test" }' } }, 
+      true, { '{"1":"one","5":"sparse test"}' } }, 
 
-    { json.encode, { nested5 }, true, { '[ [ [ [ [ "nested" ] ] ] ] ]' } },
+    { json.encode, { nested5 }, true, { '[[[[["nested"]]]]]' } },
     { json.encode, { { nested5 } },
       false, { "Cannot serialise, excessive nesting (6)" } },
     { json.encode, { table_cycle },
