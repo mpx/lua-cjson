@@ -31,7 +31,7 @@ end
 
 function serialise_table(value, indent, depth)
     local spacing, spacing2, indent2
-    if indent then 
+    if indent then
         spacing = "\n" .. indent
         spacing2 = spacing .. "  "
         indent2 = indent .. "  "

@@ -43,7 +43,7 @@ local function gen_utf16_escaped()
         end
     end
     table.insert(utf16_escaped, '"')
-   
+
     return table.concat(utf16_escaped)
 end
 
@@ -120,10 +120,10 @@ local encode_table_tests = {
       true, { '[null,null,"sparse test"]' } },
 
     { json.encode, { { [1] = "one", [4] = "sparse test" } },
-      true, { '["one",null,null,"sparse test"]' } }, 
+      true, { '["one",null,null,"sparse test"]' } },
 
     { json.encode, { { [1] = "one", [5] = "sparse test" } },
-      true, { '{"1":"one","5":"sparse test"}' } }, 
+      true, { '{"1":"one","5":"sparse test"}' } },
 
     { json.encode, { nested5 }, true, { '[[[[["nested"]]]]]' } },
     { json.encode, { { nested5 } },

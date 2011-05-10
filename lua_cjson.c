@@ -1,7 +1,7 @@
 /* CJSON - JSON support for Lua
  *
  * Copyright (c) 2010-2011  Mark Pulford <mark@kyne.com.au>
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -9,10 +9,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -105,7 +105,7 @@ typedef struct {
     int encode_keep_buffer;
 } json_config_t;
 
-typedef struct {  
+typedef struct {
     const char *data;
     int index;
     strbuf_t *tmp;    /* Temporary storage for strings */
@@ -306,7 +306,7 @@ static int json_cfg_refuse_invalid_numbers(lua_State *l)
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
-    
+
     cfg = lua_touserdata(l, 1);
     if (cfg)
         strbuf_free(&cfg->encode_buf);
@@ -720,7 +720,7 @@ static int codepoint_to_utf8(char *utf8, int codepoint)
         utf8[0] = codepoint;
         return 1;
     }
-    
+
     /* 110xxxxx 10xxxxxx */
     if (codepoint <= 0x7FF) {
         utf8[0] = (codepoint >> 6) | 0xC0;
@@ -843,7 +843,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
             json_set_token_error(token, json, "unexpected end of string");
             return;
         }
-        
+
         /* Handle escapes */
         if (ch == '\\') {
             /* Fetch escape character */
@@ -1102,7 +1102,7 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
             json_throw_parse_error(l, json, "comma or object end", &token);
 
         json_next_token(json, &token);
-    } 
+    }
 }
 
 /* Handle the array context */
@@ -1141,7 +1141,7 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
 /* Handle the "value" context */
 static void json_process_value(lua_State *l, json_parse_t *json,
-                               json_token_t *token) 
+                               json_token_t *token)
 {
     switch (token->type) {
     case T_STRING:

@@ -18,7 +18,7 @@ Requires:	lua >= %{luaver}
 %description
 CJSON provides fast JSON parsing and encoding functions for Lua. It
 allows a Lua application to quickly serialise a data structure to
-JSON, or deserialise from JSON to Lua. 
+JSON, or deserialise from JSON to Lua.
 
 %prep
 %setup -q
