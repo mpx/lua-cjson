@@ -40,7 +40,7 @@ function serialise_table(value, indent, depth)
     end
     depth = depth + 1
     if depth > 50 then
-        return "ERROR: Too many nested tables"
+        return "Cannot serialise any further: too many nested tables"
     end
 
     local max = is_array(value)
@@ -228,14 +228,22 @@ function run_test(testname, func, input, should_work, output)
 end
 
 function run_test_group(testgroup, tests)
+    function run_config(configname, func)
+        local success, msg = pcall(func)
+        print(string.format("==> Config %s: %s", configname, msg))
+        print()
+    end
+
+    function test_id(group, id)
+        return string.format("%s [%d]", group, id)
+    end
+
     for k, v in ipairs(tests) do
         if type(v) == "function" then
             -- Useful for changing configuration during a batch
-            msg = v()
-            print(string.format("==> Config %s [%d]: %s", testgroup, k, msg))
-            print()
+            run_config(test_id(testgroup, k), v)
         elseif type(v) == "table" then
-            run_test(testgroup .. " [" .. k .. "]", unpack(v))
+            run_test(test_id(testgroup, k), unpack(v))
         else
             error("Testgroup can only contain functions and tables")
         end

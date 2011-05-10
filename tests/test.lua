@@ -132,6 +132,33 @@ local encode_table_tests = {
       false, { "Cannot serialise, excessive nesting (6)" } }
 }
 
+local encode_error_tests = {
+    { json.encode, { { [false] = "wrong" } },
+      false, { "Cannot serialise boolean: table key must be a number or string" } },
+    { json.encode, { function () end },
+      false, { "Cannot serialise function: type not supported" } },
+    function ()
+        json.refuse_invalid_numbers("encode")
+        return 'Setting refuse_invalid_numbers("encode")'
+    end,
+    { json.encode, { NaN },
+      false, { "Cannot serialise number: must not be NaN or Inf" } },
+    { json.encode, { Inf },
+      false, { "Cannot serialise number: must not be NaN or Inf" } },
+    function ()
+        json.refuse_invalid_numbers(false)
+        return 'Setting refuse_invalid_numbers(false)'
+    end,
+    { json.encode, { NaN }, true, { "-nan" } },
+    { json.encode, { Inf }, true, { "inf" } },
+    function ()
+        json.refuse_invalid_numbers("encode")
+        return 'Setting refuse_invalid_numbers("encode")'
+    end,
+}
+
+local json_nested = string.rep("[", 100000) .. string.rep("]", 100000)
+
 local decode_error_tests = {
     { json.decode, { '\0"\0"' },
       false, { "JSON parser does not support UTF-16 or UTF-32" } },
@@ -153,6 +180,8 @@ local decode_error_tests = {
       false, { "Expected value but found invalid number at character 1" } },
     { json.decode, { '[ 0.4eg10 ]' },
       false, { "Expected comma or array end but found invalid token at character 6" } },
+    { json.decode, { json_nested },
+      false, { "stack overflow (too many nested data structures)" } }
 }
 
 local escape_tests = {
@@ -184,10 +213,10 @@ run_test_group("decode numeric", decode_numeric_tests)
 -- - Sparse array exception..
 -- - ..
 -- cjson.encode_sparse_array(true, 2, 3)
--- run_test_group("encode error", encode_error_tests)
 
 run_test_group("encode table", encode_table_tests)
 run_test_group("decode error", decode_error_tests)
+run_test_group("encode error", encode_error_tests)
 run_test_group("escape", escape_tests)
 
 cjson.encode_max_depth(20)

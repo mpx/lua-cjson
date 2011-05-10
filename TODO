@@ -1,6 +1,4 @@
 - Option to configure encoding escapes.
 
-- Make encode/decode routines thread safe (within the same lua_State)
-  - Optionally create an object. Clone function.
-
-- run_test_group "config" function calls should be protected by pcall?
+- Make encode/decode routines OS thread safe (within the same lua_State)
+  - Optionally create an object for settings. Clone function.
