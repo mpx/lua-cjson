@@ -229,13 +229,13 @@ function run_test(testname, func, input, should_work, output)
 end
 
 function run_test_group(testgroup, tests)
-    function run_config(configname, func)
+    local function run_config(configname, func)
         local success, msg = pcall(func)
         print(string.format("==> Config %s: %s", configname, msg))
         print()
     end
 
-    function test_id(group, id)
+    local function test_id(group, id)
         return string.format("%s [%d]", group, id)
     end
 
