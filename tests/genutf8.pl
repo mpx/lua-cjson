@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 # Create test comparison data using a different UTF-8 implementation.
 
 use strict;
+use warnings;
 use Text::Iconv;
 use FileHandle;
 
