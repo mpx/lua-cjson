@@ -78,6 +78,11 @@ static inline void strbuf_reset(strbuf_t *s)
     s->length = 0;
 }
 
+static inline int strbuf_allocated(strbuf_t *s)
+{
+    return s->buf != NULL;
+}
+
 /* Return bytes remaining in the string buffer
  * Ensure there is space for a NULL terminator. */
 static inline int strbuf_empty_length(strbuf_t *s)

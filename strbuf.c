@@ -99,12 +99,16 @@ static inline void debug_stats(strbuf_t *s)
     }
 }
 
+/* If strbuf_t has not been dynamically allocated, strbuf_free() can
+ * be called any number of times strbuf_init() */
 void strbuf_free(strbuf_t *s)
 {
     debug_stats(s);
 
-    if (s->buf)
+    if (s->buf) {
         free(s->buf);
+        s->buf = NULL;
+    }
     if (s->dynamic)
         free(s);
 }

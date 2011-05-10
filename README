@@ -34,8 +34,7 @@ Build requirements:
 Or:
 - LuaJIT (http://www.luajit.org/)
 
-The included Makefile should be reviewed. Updated the Makefile to suit
-your platform and Lua header/library directories. Then:
+Review and update the included Makefile to suit your platform. Then:
 
   # make
   # make install
@@ -66,6 +65,7 @@ Synopsis
   setting = cjson.refuse_invalid_numbers([setting])
   depth = cjson.encode_max_depth([depth])
   convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
+  keep = cjson.encode_keep_buffer([keep])
 
 
 Encoding
@@ -202,6 +202,19 @@ tables.
 This check is used to prevent a nested data structure from crashing
 the application. Eg:
   a = {}; b = { a }; a[1] = b
+
+
+Persistent encoding buffer
+-------------------------
+
+  keep = cjson.keep_encode_buffer([keep])
+  -- "keep" must be a boolean
+
+By default, CJSON will reuse the JSON encoding buffer to improve
+performance. The buffer will grow to the largest size required and is
+not freed until CJSON is garbage collected. Setting this option to
+"false" will cause the buffer to be freed after each call to
+cjson.encode().
 
 
 References

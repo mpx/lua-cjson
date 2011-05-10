@@ -181,7 +181,7 @@ local decode_error_tests = {
     { json.decode, { '[ 0.4eg10 ]' },
       false, { "Expected comma or array end but found invalid token at character 6" } },
     { json.decode, { json_nested },
-      false, { "stack overflow (too many nested data structures)" } }
+      false, { "Too many nested data structures" } }
 }
 
 local escape_tests = {

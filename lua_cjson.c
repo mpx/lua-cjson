@@ -49,6 +49,7 @@
 #define DEFAULT_MAX_DEPTH 20
 #define DEFAULT_ENCODE_REFUSE_BADNUM 1
 #define DEFAULT_DECODE_REFUSE_BADNUM 0
+#define DEFAULT_ENCODE_KEEP_BUFFER 1
 
 typedef enum {
     T_OBJ_BEGIN,
@@ -101,6 +102,7 @@ typedef struct {
     int encode_max_depth;
     int encode_refuse_badnum;
     int decode_refuse_badnum;
+    int encode_keep_buffer;
 } json_config_t;
 
 typedef struct {  
@@ -172,7 +174,7 @@ static json_config_t *json_fetch_config(lua_State *l)
     lua_gettable(l, LUA_REGISTRYINDEX);
     cfg = lua_touserdata(l, -1);
     if (!cfg)
-        luaL_error(l, "BUG: Unable to fetch cjson configuration");
+        luaL_error(l, "BUG: Unable to fetch CJSON configuration");
 
     lua_pop(l, 1);
 
@@ -239,6 +241,23 @@ static int json_cfg_encode_max_depth(lua_State *l)
     return 1;
 }
 
+/* Configures JSON encoding buffer persistence */
+static int json_cfg_encode_keep_buffer(lua_State *l)
+{
+    json_config_t *cfg;
+
+    json_verify_arg_count(l, 1);
+    cfg = json_fetch_config(l);
+
+    if (lua_gettop(l)) {
+        luaL_checktype(l, 1, LUA_TBOOLEAN);
+        cfg->encode_keep_buffer = lua_toboolean(l, 1);
+    }
+
+    lua_pushboolean(l, cfg->encode_keep_buffer);
+
+    return 1;
+}
 
 /* On argument: decode enum and set config variables
  * **options must point to a NULL terminated array of 4 enums
@@ -317,6 +336,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_max_depth = DEFAULT_MAX_DEPTH;
     cfg->encode_refuse_badnum = DEFAULT_ENCODE_REFUSE_BADNUM;
     cfg->decode_refuse_badnum = DEFAULT_DECODE_REFUSE_BADNUM;
+    cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
 
     /* Decoding init */
 
@@ -392,8 +412,11 @@ static void json_create_config(lua_State *l)
 
 /* ===== ENCODING ===== */
 
-static void json_encode_exception(lua_State *l, int lindex, const char *reason)
+static void json_encode_exception(lua_State *l, json_config_t *cfg, int lindex,
+                                  const char *reason)
 {
+    if (!cfg->encode_keep_buffer)
+        strbuf_free(&cfg->encode_buf);
     luaL_error(l, "Cannot serialise %s: %s",
                   lua_typename(l, lua_type(l, lindex)), reason);
 }
@@ -469,7 +492,7 @@ static int lua_array_length(lua_State *l, json_config_t *cfg)
         max > items * cfg->encode_sparse_ratio &&
         max > cfg->encode_sparse_safe) {
         if (!cfg->encode_sparse_convert)
-            json_encode_exception(l, -1, "excessively sparse array");
+            json_encode_exception(l, cfg, -1, "excessively sparse array");
 
         return -1;
     }
@@ -482,6 +505,8 @@ static void json_encode_descend(lua_State *l, json_config_t *cfg)
     cfg->current_depth++;
 
     if (cfg->current_depth > cfg->encode_max_depth) {
+        if (!cfg->encode_keep_buffer)
+            strbuf_free(&cfg->encode_buf);
         luaL_error(l, "Cannot serialise, excessive nesting (%d)",
                    cfg->current_depth);
     }
@@ -520,12 +545,12 @@ static void json_append_array(lua_State *l, json_config_t *cfg, strbuf_t *json,
 }
 
 static void json_append_number(lua_State *l, strbuf_t *json, int index,
-                               int refuse_badnum)
+                               json_config_t *cfg)
 {
     double num = lua_tonumber(l, index);
 
-    if (refuse_badnum && (isinf(num) || isnan(num)))
-        json_encode_exception(l, index, "must not be NaN or Inf");
+    if (cfg->encode_refuse_badnum && (isinf(num) || isnan(num)))
+        json_encode_exception(l, cfg, index, "must not be NaN or Inf");
 
     strbuf_append_number(json, num);
 }
@@ -553,13 +578,13 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         keytype = lua_type(l, -2);
         if (keytype == LUA_TNUMBER) {
             strbuf_append_char(json, '"');
-            json_append_number(l, json, -2, cfg->encode_refuse_badnum);
+            json_append_number(l, json, -2, cfg);
             strbuf_append_mem(json, "\":", 2);
         } else if (keytype == LUA_TSTRING) {
             json_append_string(l, json, -2);
             strbuf_append_char(json, ':');
         } else {
-            json_encode_exception(l, -2,
+            json_encode_exception(l, cfg, -2,
                                   "table key must be a number or string");
             /* never returns */
         }
@@ -585,7 +610,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
         json_append_string(l, json, -1);
         break;
     case LUA_TNUMBER:
-        json_append_number(l, json, -1, cfg->encode_refuse_badnum);
+        json_append_number(l, json, -1, cfg);
         break;
     case LUA_TBOOLEAN:
         if (lua_toboolean(l, -1))
@@ -611,7 +636,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
     default:
         /* Remaining types (LUA_TFUNCTION, LUA_TUSERDATA, LUA_TTHREAD,
          * and LUA_TLIGHTUSERDATA) cannot be serialised */
-        json_encode_exception(l, -1, "type not supported");
+        json_encode_exception(l, cfg, -1, "type not supported");
         /* never returns */
     }
 }
@@ -629,13 +654,20 @@ static int json_encode(lua_State *l)
     cfg = json_fetch_config(l);
     cfg->current_depth = 0;
 
-    /* Reset persistent encode_buf. Avoids temporary allocation
-     * for a single call. */
-    strbuf_reset(&cfg->encode_buf);
+    /* Reset the persistent buffer if it exists.
+     * Otherwise allocate a new buffer. */
+    if (strbuf_allocated(&cfg->encode_buf))
+        strbuf_reset(&cfg->encode_buf);
+    else
+        strbuf_init(&cfg->encode_buf, 0);
+
     json_append_data(l, cfg, &cfg->encode_buf);
     json = strbuf_string(&cfg->encode_buf, &len);
 
     lua_pushlstring(l, json, len);
+
+    if (!cfg->encode_keep_buffer)
+        strbuf_free(&cfg->encode_buf);
 
     return 1;
 }
@@ -1176,7 +1208,7 @@ static int json_decode(lua_State *l)
     /* Detect Unicode other than UTF-8 (see RFC 4627, Sec 3)
      *
      * CJSON can support any simple data type, hence only the first
-     * character is guaranteed to be ASCII (at worst: "). This is
+     * character is guaranteed to be ASCII (at worst: '"'). This is
      * still enough to detect whether the wrong encoding is in use. */
     if (len >= 2 && (!json[0] || !json[1]))
         luaL_error(l, "JSON parser does not support UTF-16 or UTF-32");
@@ -1195,6 +1227,7 @@ int luaopen_cjson(lua_State *l)
         { "decode", json_decode },
         { "encode_sparse_array", json_cfg_encode_sparse_array },
         { "encode_max_depth", json_cfg_encode_max_depth },
+        { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
         { NULL, NULL }
     };

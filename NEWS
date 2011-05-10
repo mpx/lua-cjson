@@ -1,6 +1,7 @@
 Version 1.0.1 (May 10 2011)
 * Added build support for OSX
 * Removed unnecessary whitespace from JSON output
+* Added cjson.encode_keep_buffer()
 
 Version 1.0 (May 9 2011)
 * Initial release.
