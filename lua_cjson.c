@@ -1017,13 +1017,22 @@ static void json_throw_parse_error(lua_State *l, json_parse_t *json,
                exp, found, token->index + 1);
 }
 
+static void json_decode_checkstack(lua_State *l, json_parse_t *json, int n)
+{
+    if (lua_checkstack(l, n))
+        return;
+
+    strbuf_free(json->tmp);
+    luaL_error(l, "Too many nested data structures");
+}
+
 static void json_parse_object_context(lua_State *l, json_parse_t *json)
 {
     json_token_t token;
 
     /* 3 slots required:
      * .., table, key, value */
-    luaL_checkstack(l, 3, "too many nested data structures");
+    json_decode_checkstack(l, json, 3);
 
     lua_newtable(l);
 
@@ -1072,7 +1081,7 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
     /* 2 slots required:
      * .., table, value */
-    luaL_checkstack(l, 2, "too many nested data structures");
+    json_decode_checkstack(l, json, 2);
 
     lua_newtable(l);
 
