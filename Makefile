@@ -18,7 +18,6 @@ LUA_LIB_DIR ?=     $(PREFIX)/lib/lua/$(LUA_VERSION)
 #CFLAGS ?=          -g -Wall -pedantic -fno-inline
 CFLAGS ?=          -g -O3 -Wall -pedantic
 override CFLAGS += -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
-LDFLAGS +=         -lm
 
 INSTALL ?= install
 
