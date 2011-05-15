@@ -147,9 +147,13 @@ local encode_error_tests = {
       false, { "Cannot serialise number: must not be NaN or Inf" } },
     function ()
         json.refuse_invalid_numbers(false)
-        return 'Setting refuse_invalid_numbers(false)'
+        return 'Setting refuse_invalid_numbers(false).'
     end,
-    { json.encode, { NaN }, true, { "-nan" } },
+    function ()
+        print('NOTE: receiving "-nan" is ok..')
+        return
+    end,
+    { json.encode, { NaN }, true, { "nan" } },
     { json.encode, { Inf }, true, { "inf" } },
     function ()
         json.refuse_invalid_numbers("encode")

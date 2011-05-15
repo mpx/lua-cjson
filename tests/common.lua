@@ -231,7 +231,9 @@ end
 function run_test_group(testgroup, tests)
     local function run_config(configname, func)
         local success, msg = pcall(func)
-        print(string.format("==> Config %s: %s", configname, msg))
+        if msg then
+            print(string.format("==> Config %s: %s", configname, msg))
+        end
         print()
     end
 
