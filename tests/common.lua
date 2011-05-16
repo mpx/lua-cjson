@@ -96,12 +96,21 @@ function dump_value(value)
 end
 
 function file_load(filename)
-    local file, err = io.open(filename)
-    if file == nil then
-        error("Unable to read " .. filename)
+    local file
+    if filename == nil then
+        file = io.stdin
+    else
+        local err
+        file, err = io.open(filename)
+        if file == nil then
+            error(string.format("Unable to read '%s': %s", filename, err))
+        end
     end
     local data = file:read("*a")
-    file:close()
+
+    if filename ~= nil then
+        file:close()
+    end
 
     if data == nil then
         error("Failed to read " .. filename)
@@ -111,12 +120,20 @@ function file_load(filename)
 end
 
 function file_save(filename, data)
-    local file, err = io.open(filename, "w")
-    if file == nil then
-        error("Unable to write " .. filename)
+    local file
+    if filename == nil then
+        file = io.stdout
+    else
+        local err
+        file, err = io.open(filename, "w")
+        if file == nil then
+            error(string.format("Unable to write '%s': %s", filename, err))
+        end
     end
     file:write(data)
-    file:close()
+    if filename ~= nil then
+        file:close()
+    end
 end
 
 function compare_values(val1, val2)

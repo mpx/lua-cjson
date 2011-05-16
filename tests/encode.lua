@@ -1,5 +1,11 @@
 #!/usr/bin/env lua
 
+-- usage: encode.lua [lua_file]
+--
+-- Eg:
+-- echo '{ "testing" }' | ./encode.lua
+-- ./encode.lua lua_data.lua
+
 require "common"
 require "cjson"
 
@@ -16,11 +22,7 @@ function get_lua_table(file)
 	return env.data
 end
 
-if not arg[1] then
-    print("usage: encode.lua FILE")
-    os.exit(-1)
-end
-
-print(cjson.encode(get_lua_table(arg[1])))
+local t = get_lua_table(arg[1])
+print(cjson.encode(t))
 
 -- vi:ai et sw=4 ts=4:
