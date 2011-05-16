@@ -223,12 +223,11 @@ run_test_group("decode error", decode_error_tests)
 run_test_group("encode error", encode_error_tests)
 run_test_group("escape", escape_tests)
 
+cjson.refuse_invalid_numbers(false)
 cjson.encode_max_depth(20)
 for i = 1, #arg do
     run_test("decode cycle " .. arg[i], test_decode_cycle, { arg[i] },
              true, { true })
 end
-
-cjson.refuse_invalid_numbers(true)
 
 -- vi:ai et sw=4 ts=4:
