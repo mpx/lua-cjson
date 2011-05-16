@@ -1,5 +1,4 @@
 require "cjson"
-require "posix"
 
 -- Misc routines to assist with CJSON testing
 --
@@ -118,44 +117,6 @@ function file_save(filename, data)
     end
     file:write(data)
     file:close()
-end
-
-function gettimeofday()
-    local tv_sec, tv_usec = posix.gettimeofday()
-
-    return tv_sec + tv_usec / 1000000
-end
-
-function benchmark(tests, iter, rep)
-    local function bench(func, iter)
-        collectgarbage("stop")
-        local t = gettimeofday()
-        for i = 1, iter do
-            func(i)
-        end
-        t = gettimeofday() - t
-        collectgarbage("restart")
-        return (iter / t)
-    end
-
-    local test_results = {}
-    for name, func in pairs(tests) do
-        -- k(number), v(string)
-        -- k(string), v(function)
-        -- k(number), v(function)
-        if type(func) == "string" then
-            name = func
-            func = _G[name]
-        end
-        local result = {}
-        for i = 1, rep do
-            result[i] = bench(func, iter)
-        end
-        table.sort(result)
-        test_results[name] = result[rep]
-    end
-
-    return test_results
 end
 
 function compare_values(val1, val2)
