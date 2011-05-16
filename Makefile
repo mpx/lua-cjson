@@ -1,4 +1,4 @@
-CJSON_VERSION = 1.0.1
+CJSON_VERSION = 1.0.1dev
 LUA_VERSION =   5.1
 
 # See http://lua-users.org/wiki/BuildingModules for platform specific
