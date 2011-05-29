@@ -38,3 +38,5 @@ clean:
 package:
 	git archive --prefix="lua-cjson-$(CJSON_VERSION)/" master | \
 		gzip -9 > "lua-cjson-$(CJSON_VERSION).tar.gz"
+	git archive --prefix="lua-cjson-$(CJSON_VERSION)/" \
+		-o "lua-cjson-$(CJSON_VERSION).zip" master
