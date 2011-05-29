@@ -150,7 +150,7 @@ local encode_error_tests = {
         return 'Setting refuse_invalid_numbers(false).'
     end,
     function ()
-        print('NOTE: receiving "-nan" is ok..')
+        print('NOTE: receiving "-nan" in the following test is ok..')
         return
     end,
     { json.encode, { NaN }, true, { "nan" } },
@@ -208,6 +208,8 @@ local escape_tests = {
     -- Test decoding of all UTF-16 escapes
     { json.decode, { utf16_escaped }, true, { utf8_raw } }
 }
+
+print(string.format("Testing CJSON v%s\n", cjson.version))
 
 run_test_group("decode simple value", decode_simple_tests)
 run_test_group("encode simple value", encode_simple_tests)
