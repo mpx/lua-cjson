@@ -2,14 +2,14 @@
 %define lualibdir %{_libdir}/lua/%{luaver}
 
 Name:		lua-cjson
-Version:	1.0.1dev
+Version:	1.0.2
 Release:	1%{?dist}
 Summary:	JSON support for the Lua language
 
 Group:		Development/Libraries
 License:	MIT
 URL:		http://www.kyne.com.au/~mark/software/lua-cjson/
-Source0:	http://www.kyne.com.au/~mark/software/lua-cjson/lua-cjson-%{version}.tar.gz
+Source0:	http://www.kyne.com.au/~mark/software/lua-cjson/lua-cjson-%{version}.zip
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	lua >= %{luaver}, lua-devel >= %{luaver}
@@ -44,5 +44,11 @@ rm -rf "$RPM_BUILD_ROOT"
 
 
 %changelog
+* Sun May 29 2011 Mark Pulford <mark@kyne.com.au> - 1.0.2-1
+- Updated for 1.0.2
+
+* Sun May 10 2011 Mark Pulford <mark@kyne.com.au> - 1.0.1-1
+- Updated for 1.0.1
+
 * Sun May 1 2011 Mark Pulford <mark@kyne.com.au> - 1.0-1
 - Initial package

@@ -1,8 +1,8 @@
 package = "lua-cjson"
-version = "1.0.1-1"
+version = "1.0.2-1"
 
 source = {
-    url = "http://www.kyne.com.au/~mark/software/lua-cjson-1.0.1.zip",
+    url = "http://www.kyne.com.au/~mark/software/lua-cjson-1.0.2.zip",
 }
 
 description = {
@@ -24,7 +24,7 @@ build = {
     modules = {
         cjson = {
             sources = { "lua_cjson.c", "strbuf.c" },
-            defines = { "VERSION=\"1.0.1\"" }
+            defines = { "VERSION=\"1.0.2\"" }
         }
     },
     copy_directories = { "tests" }
