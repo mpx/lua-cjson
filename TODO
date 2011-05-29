@@ -1,4 +1,10 @@
-- Option to configure encoding escapes.
-
 - Make encode/decode routines OS thread safe (within the same lua_State)
   - Optionally create an object for settings. Clone function.
+
+- Explain limitations of using JSON as a serialisation format under Lua:
+  - Tables keys:
+    - Must only be integer or string
+    - Integer keys will be deserialised as a string
+  - Metamethods are not used when encoding tables:
+    - next() is used to iterate over hashes.
+    - rawget() is used when iterating over arrays.
