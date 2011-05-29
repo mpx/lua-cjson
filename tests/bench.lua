@@ -12,12 +12,14 @@ local json = require "cjson"
 
 function benchmark(tests, iter, rep)
     local function bench(func, iter)
+        -- collectgarbage("stop")
         collectgarbage("collect")
         local t = socket.gettime()
         for i = 1, iter do
             func(i)
         end
         t = socket.gettime() - t
+        -- collectgarbage("restart")
         return (iter / t)
     end
 
