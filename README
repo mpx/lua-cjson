@@ -15,7 +15,8 @@ Features:
 Caveats:
 - UTF-16 and UTF-32 are not supported.
 - Multiple OS threads within a single Lua state are not currently
-  supported.
+  supported. However, this is an extremely uncommon configuration due
+  to performance limitations.
 
 To obtain the latest version of Lua CJSON visit:
 
@@ -34,17 +35,38 @@ Build requirements:
 Or:
 - LuaJIT (http://www.luajit.org/)
 
+There are 3 build methods available:
+- Gmake: POSIX, OSX
+- RPM: Some Linux distributions
+- LuaRocks (http://www.luarocks.org/): POSIX, OSX, Windows
+
+
+Gmake
+-----
+
 Review and update the included Makefile to suit your platform. Then:
 
-  # make
-  # make install
+  # gmake
+  # gmake install
   OR
   # cp cjson.so [your_module_directory]
+
+
+RPM
+---
 
 Linux distributions using RPM should be able to build a package with
 the following command:
 
-  # rpmbuild -tb lua-cjson-1.0.2.zip
+  # rpmbuild -tb lua-cjson-1.0.2.tar.gz
+
+
+LuaRocks
+--------
+
+Extract the source package into a directory and run:
+
+  # cd lua-cjson-1.0.2; luarocks make
 
 
 Lua CJSON API
