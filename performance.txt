@@ -1,42 +1,51 @@
-Performance comparison
-----------------------
+JSON Performance Comparison under Lua
+-------------------------------------
 
-Here is a rough performance comparision of several JSON packages
-available for Lua:
+The following JSON packages for Lua were tested:
 
 - DKJSON 1.0: One of the fastest pure Lua JSON implementations.
 - LuaJSON 1.0: A mixed Lua/C JSON implementation using LPeg.
-- CSJON 1.0: Pure C.
+- Lua YAJL 2.0: A Lua wrapper for the YAJL JSON library.
+- CSJON 1.0.2: Pure C.
+
+LuaJSON 1.2.2 appeared to be slower during initial testing, so 1.0 was
+used instead.
+
+The following Lua implementations were used for this comparison:
+- Lua 5.1.4
+- LuaJIT 2.0.0-beta7
 
 The example JSON files used were taken from http://json.org/ and
 RFC 4627.
 
-                        === DKJSON ===  == LuaJSON ===  === CJSON ====
-== Decoding ==          Lua     LuaJIT  Lua     LuaJIT  Lua     LuaJIT
-example1.json           1.0x    1.9x    3.4x    3.9x    12.3x   13.7x
-example2.json           1.0x    2.0x    3.6x    4.6x    12.2x   20.0x
-example3.json           1.0x    2.0x    3.9x    4.7x    13.1x   18.8x
-example4.json           1.0x    1.8x    3.7x    4.4x    11.9x   17.0x
-example5.json           1.0x    1.5x    4.0x    4.8x    14.6x   22.2x
-rfc-example1.json       1.0x    1.5x    3.2x    4.3x    11.7x   16.9x
-rfc-example2.json       1.0x    1.5x    3.7x    4.5x    10.3x   19.4x
-== Average ==>          1.0x    1.7x    3.5x    4.2x    11.3x   16.5x
+		DKJSON 1.0	LuaJSON 1.0	LuaYAJL 2.0	CJSON 1.0.2
+== Decoding ==	Lua	LuaJIT	Lua	LuaJIT	Lua	LuaJIT	Lua	LuaJIT
+example1	1.0x	2.0x	3.4x	4.0x	7.1x	10.1x	13.2x	19.4x
+example2	1.0x	2.1x	3.5x	4.5x	6.6x	9.8x	12.7x	20.0x
+example3	1.0x	2.0x	3.9x	4.7x	7.0x	9.4x	13.2x	19.3x
+example4	1.0x	1.9x	3.7x	4.4x	7.4x	10.6x	11.8x	18.0x
+example5	1.0x	2.1x	4.0x	4.7x	7.7x	11.4x	14.7x	22.3x
+numbers		1.0x	2.1x	2.1x	3.4x	4.6x	5.7x	8.6x	10.4x
+rfc-example1	1.0x	2.0x	3.2x	4.2x	5.8x	8.2x	11.8x	17.7x
+rfc-example2	1.0x	2.0x	3.6x	4.5x	7.0x	9.3x	14.5x	20.5x
+types		1.0x	2.1x	2.3x	3.5x	4.9x	7.6x	10.7x	17.2x
+== Average ==> 	1.0x	2.0x	3.3x	4.2x	6.4x	9.1x	12.4x	18.3x
 
-== Encoding ==                                           
-example1.json           1.0x    1.8x    0.6x    1.4x    23.5x   23.4x
-example2.json           1.0x    2.0x    0.5x    1.2x    22.4x   22.4x
-example3.json           1.0x    1.8x    0.6x    1.3x    10.8x   13.4x
-example4.json           1.0x    1.2x    0.7x    1.5x    15.7x   17.2x
-example5.json           1.0x    1.5x    0.6x    1.4x    22.1x   20.4x
-rfc-example1.json       1.0x    1.4x    0.5x    1.1x    8.9x    9.2x
-rfc-example2.json       1.0x    1.4x    0.6x    1.3x    10.4x   10.9x
-== Average ==>          1.0x    1.6x    0.6x    1.3x    17.0x   17.2x
+== Encoding ==
+example1	1.0x	1.9x	0.6x	1.4x	3.5x	5.6x	23.1x	29.1x
+example2	1.0x	2.0x	0.5x	1.2x	3.0x	4.9x	23.4x	28.5x
+example3	1.0x	1.8x	0.6x	1.3x	3.0x	4.7x	13.3x	14.9x
+example4	1.0x	1.7x	0.7x	1.5x	4.2x	6.6x	15.4x	18.5x
+example5	1.0x	2.0x	0.6x	1.4x	3.4x	5.5x	22.7x	25.5x
+numbers		1.0x	2.4x	0.4x	0.9x	1.4x	2.1x	4.3x	4.6x
+rfc-example1	1.0x	1.9x	0.5x	1.2x	2.3x	3.6x	8.8x	9.6x
+rfc-example2	1.0x	1.9x	0.6x	1.3x	2.8x	4.3x	10.7x	10.7x
+types		1.0x	2.4x	0.3x	0.7x	1.4x	2.3x	11.7x	11.3x
+== Average ==> 	1.0x	2.0x	0.6x	1.2x	2.8x	4.4x	14.8x	17.0x
 
 
-CJSON spends a significant amount of time calling sprintf() to convert
-doubles to strings while encoding "rfc-example1.json". Hence it only
-shows a 9x improvement in this case.
+Number conversion is a relatively expensive operation. Number heavy
+JSON will show less performance difference between libraries.
 
-The performance gains available can vary widely. If performance is
-critical, I would recommend testing in a relevant environment with
-your intended data.
+Performance can vary widely between platforms and data sets. These
+results should only be considered as a rough guide.
