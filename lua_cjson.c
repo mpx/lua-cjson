@@ -26,9 +26,10 @@
  * - JSON "null" values are represented as lightuserdata since Lua
  *   tables cannot contain "nil". Compare with cjson.null.
  * - Invalid UTF-8 characters are not detected and will be passed
- *   untouched.
+ *   untouched. If required, UTF-8 error checking should be done
+ *   outside this library.
  * - Javascript comments are not part of the JSON spec, and are not
- *   supported.
+ *   currently supported.
  *
  * Note: Decoding is slower than encoding. Lua spends significant
  *       time (30%) managing tables when parsing JSON since it is
@@ -94,6 +95,7 @@ typedef struct {
     char *char2escape[256]; /* Encoding */
 #endif
     strbuf_t encode_buf;
+    char number_fmt[8];     /* "%.XXg\0" */
     int current_depth;
 
     int encode_sparse_convert;
@@ -103,6 +105,7 @@ typedef struct {
     int encode_refuse_badnum;
     int decode_refuse_badnum;
     int encode_keep_buffer;
+    int encode_number_precision;
 } json_config_t;
 
 typedef struct {
@@ -241,6 +244,33 @@ static int json_cfg_encode_max_depth(lua_State *l)
     return 1;
 }
 
+static void json_set_number_precision(json_config_t *cfg, int prec)
+{
+    cfg->encode_number_precision = prec;
+    sprintf(cfg->number_fmt, "%%.%dg", prec);
+}
+
+/* Configures number precision when converting doubles to text */
+static int json_cfg_encode_number_precision(lua_State *l)
+{
+    json_config_t *cfg;
+    int precision;
+
+    json_verify_arg_count(l, 1);
+    cfg = json_fetch_config(l);
+
+    if (lua_gettop(l)) {
+        precision = luaL_checkinteger(l, 1);
+        luaL_argcheck(l, 1 <= precision && precision <= 14, 1,
+                      "expected integer between 1 and 14");
+        json_set_number_precision(cfg, precision);
+    }
+
+    lua_pushinteger(l, cfg->encode_number_precision);
+
+    return 1;
+}
+
 /* Configures JSON encoding buffer persistence */
 static int json_cfg_encode_keep_buffer(lua_State *l)
 {
@@ -337,6 +367,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_refuse_badnum = DEFAULT_ENCODE_REFUSE_BADNUM;
     cfg->decode_refuse_badnum = DEFAULT_DECODE_REFUSE_BADNUM;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
+    json_set_number_precision(cfg, 14);
 
     /* Decoding init */
 
@@ -552,7 +583,12 @@ static void json_append_number(lua_State *l, strbuf_t *json, int index,
     if (cfg->encode_refuse_badnum && (isinf(num) || isnan(num)))
         json_encode_exception(l, cfg, index, "must not be NaN or Inf");
 
-    strbuf_append_number(json, num);
+    /* Lowest double printed with %.14g is 21 characters long:
+     * -1.7976931348623e+308
+     *
+     * Use 32 to include the \0, and a few extra just in case..
+     */
+    strbuf_append_fmt(json, 32, cfg->number_fmt, num);
 }
 
 static void json_append_object(lua_State *l, json_config_t *cfg,
@@ -1227,6 +1263,7 @@ int luaopen_cjson(lua_State *l)
         { "decode", json_decode },
         { "encode_sparse_array", json_cfg_encode_sparse_array },
         { "encode_max_depth", json_cfg_encode_max_depth },
+        { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
         { NULL, NULL }

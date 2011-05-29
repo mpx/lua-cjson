@@ -204,6 +204,19 @@ the application. Eg:
   a = {}; b = { a }; a[1] = b
 
 
+Number precision
+----------------
+
+  precision = cjson.encode_number_precision([precision])
+  -- "precision" must be between 1 and 14 (inclusive)
+
+By default CJSON will use up to 14 digits for precision when
+converting a number to text.
+
+Reducing number precision to 3 can improve performance of number
+heavy conversions by up to 50%.
+
+
 Persistent encoding buffer
 -------------------------
 

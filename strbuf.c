@@ -197,25 +197,28 @@ void strbuf_append_string(strbuf_t *s, const char *str)
     }
 }
 
-void strbuf_append_number(strbuf_t *s, double number)
+/* strbuf_append_fmt() should only be used when an upper bound
+ * is known for the output string. */
+void strbuf_append_fmt(strbuf_t *s, int len, const char *fmt, ...)
 {
-    int len;
+    va_list arg;
+    int fmt_len;
 
-    /* Lowest double printed with %.14g is 21 characters long:
-     * -1.7976931348623e+308
-     *
-     * Use 32 to include the \0, and a few extra just in case..
-     */
-    strbuf_ensure_empty_length(s, 32);
+    strbuf_ensure_empty_length(s, len);
 
-    len = sprintf(s->buf + s->length, "%.14g", number);
-    if (len < 0)
+    va_start(arg, fmt);
+    fmt_len = vsnprintf(s->buf + s->length, len, fmt, arg);
+    va_end(arg);
+
+    if (fmt_len < 0)
         die("BUG: Unable to convert number");  /* This should never happen.. */
 
-    s->length += len;
+    s->length += fmt_len;
 }
 
-void strbuf_append_fmt(strbuf_t *s, const char *fmt, ...)
+/* strbuf_append_fmt_retry() can be used when the there is no known
+ * upper bound for the output string. */
+void strbuf_append_fmt_retry(strbuf_t *s, const char *fmt, ...)
 {
     va_list arg;
     int fmt_len, try;

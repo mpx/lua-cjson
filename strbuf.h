@@ -65,10 +65,10 @@ static char *strbuf_string(strbuf_t *s, int *len);
 static  void strbuf_ensure_empty_length(strbuf_t *s, int len);
 
 /* Update */
-extern void strbuf_append_fmt(strbuf_t *s, const char *format, ...);
+extern void strbuf_append_fmt(strbuf_t *s, int len, const char *fmt, ...);
+extern void strbuf_append_fmt_retry(strbuf_t *s, const char *format, ...);
 static void strbuf_append_mem(strbuf_t *s, const char *c, int len);
 extern void strbuf_append_string(strbuf_t *s, const char *str);
-extern void strbuf_append_number(strbuf_t *s, double number);
 static void strbuf_append_char(strbuf_t *s, const char c);
 static void strbuf_ensure_null(strbuf_t *s);
 
