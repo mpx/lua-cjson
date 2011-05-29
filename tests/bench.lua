@@ -8,9 +8,10 @@
 
 require "common"
 require "socket"
+
 local json = require "cjson"
 
-function benchmark(tests, iter, rep)
+function benchmark(tests, seconds, rep)
     local function bench(func, iter)
         -- collectgarbage("stop")
         collectgarbage("collect")
@@ -23,6 +24,14 @@ function benchmark(tests, iter, rep)
         return (iter / t)
     end
 
+    -- Roughly calculate the number of interations required
+    -- to obtain a particular time period.
+    local function calc_iter(func, seconds)
+        local base_iter = 10
+        local rate = (bench(func, base_iter) + bench(func, base_iter)) / 2
+        return math.ceil(seconds * rate)
+    end
+
     local test_results = {}
     for name, func in pairs(tests) do
         -- k(number), v(string)
@@ -32,6 +41,7 @@ function benchmark(tests, iter, rep)
             name = func
             func = _G[name]
         end
+        local iter = calc_iter(func, seconds)
         local result = {}
         for i = 1, rep do
             result[i] = bench(func, iter)
@@ -59,7 +69,7 @@ function bench_file(filename)
         decode = test_decode
     }
 
-    return benchmark(tests, 5000, 5)
+    return benchmark(tests, 0.1, 5)
 end
 
 cjson.encode_keep_buffer(true)
