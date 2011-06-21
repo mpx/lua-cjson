@@ -9,7 +9,7 @@ Summary:	JSON support for the Lua language
 Group:		Development/Libraries
 License:	MIT
 URL:		http://www.kyne.com.au/~mark/software/lua-cjson/
-Source0:	http://www.kyne.com.au/~mark/software/lua-cjson/lua-cjson-%{version}.zip
+Source0:	http://www.kyne.com.au/~mark/software/lua-cjson/lua-cjson-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	lua >= %{luaver}, lua-devel >= %{luaver}
