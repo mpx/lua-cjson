@@ -118,12 +118,13 @@ local encode_table_tests = {
     end,
     { json.encode, { { [3] = "sparse test" } },
       true, { '[null,null,"sparse test"]' } },
-
     { json.encode, { { [1] = "one", [4] = "sparse test" } },
       true, { '["one",null,null,"sparse test"]' } },
-
     { json.encode, { { [1] = "one", [5] = "sparse test" } },
       true, { '{"1":"one","5":"sparse test"}' } },
+
+    { json.encode, { { ["2"] = "numeric string key test" } },
+      true, { '{"2":"numeric string key test"}' } },
 
     { json.encode, { nested5 }, true, { '[[[[["nested"]]]]]' } },
     { json.encode, { { nested5 } },
