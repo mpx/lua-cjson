@@ -1,4 +1,4 @@
-Lua CJSON v1.0.2
+Lua CJSON v1.0.3
 ================
 
 Lua CJSON is covered by the MIT license. See the file "LICENSE" for
@@ -58,7 +58,7 @@ RPM
 Linux distributions using RPM should be able to build a package with
 the following command:
 
-  # rpmbuild -tb lua-cjson-1.0.2.tar.gz
+  # rpmbuild -tb lua-cjson-1.0.3.tar.gz
 
 
 LuaRocks
@@ -66,7 +66,7 @@ LuaRocks
 
 Extract the source package into a directory and run:
 
-  # cd lua-cjson-1.0.2; luarocks make
+  # cd lua-cjson-1.0.3; luarocks make
 
 
 Lua CJSON API
