@@ -44,6 +44,10 @@
 
 #include "strbuf.h"
 
+#ifdef MISSING_ISINF
+#define isinf(x) (!isnan(x) && isnan((x) - (x)))
+#endif
+
 #define DEFAULT_SPARSE_CONVERT 0
 #define DEFAULT_SPARSE_RATIO 2
 #define DEFAULT_SPARSE_SAFE 10

@@ -51,6 +51,9 @@ Review and update the included Makefile to suit your platform. Then:
   OR
   # cp cjson.so [your_module_directory]
 
+Note: Some Solaris platforms are missing isinf(). You can work around
+      this bug by adding -DMISSING_ISINF to CFLAGS in the Makefile.
+
 
 RPM
 ---

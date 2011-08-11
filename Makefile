@@ -15,6 +15,9 @@ LDFLAGS +=         -shared
 LUA_INCLUDE_DIR ?= $(PREFIX)/include
 LUA_LIB_DIR ?=     $(PREFIX)/lib/lua/$(LUA_VERSION)
 
+# Some versions of Solaris are missing isinf(). Add -DMISSING_ISINF to
+# CFLAGS to work around this bug.
+
 #CFLAGS ?=          -g -Wall -pedantic -fno-inline
 CFLAGS ?=          -g -O3 -Wall -pedantic
 override CFLAGS += -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
