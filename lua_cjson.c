@@ -522,7 +522,7 @@ static int lua_array_length(lua_State *l, json_config_t *cfg)
         return -1;
     }
 
-    /* Encode very sparse arrays as objects (if enabled) */
+    /* Encode excessively sparse arrays as objects (if enabled) */
     if (cfg->encode_sparse_ratio > 0 &&
         max > items * cfg->encode_sparse_ratio &&
         max > cfg->encode_sparse_safe) {
