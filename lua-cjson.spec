@@ -43,7 +43,7 @@ rm -rf "$RPM_BUILD_ROOT"
 
 
 %changelog
-* Wed Aug ? 2011 Mark Pulford <mark@kyne.com.au> - 1.0.3-1
+* Wed Sep 15 2011 Mark Pulford <mark@kyne.com.au> - 1.0.3-1
 - Updated for 1.0.3
 
 * Sun May 29 2011 Mark Pulford <mark@kyne.com.au> - 1.0.2-1

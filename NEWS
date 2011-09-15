@@ -1,3 +1,7 @@
+Version 1.0.3 (Sep 15 2011)
+* Fixed detection of objects with numeric string keys
+* Provided work around for missing isinf() on Solaris
+
 Version 1.0.2 (May 30 2011)
 * Portability improvements for Windows
   - No longer links with -lm
