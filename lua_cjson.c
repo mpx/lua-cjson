@@ -1273,7 +1273,7 @@ int luaopen_cjson(lua_State *l)
         { NULL, NULL }
     };
 
-    /* Use json_fetch_config as a pointer.
+    /* Use json_config_key as a pointer.
      * It's faster than using a config string, and more unique */
     lua_pushlightuserdata(l, &json_config_key);
     json_create_config(l);
