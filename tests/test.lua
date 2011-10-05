@@ -210,6 +210,21 @@ local escape_tests = {
     { json.decode, { utf16_escaped }, true, { utf8_raw } }
 }
 
+-- The standard Lua interpreter is ANSI C online doesn't support locales
+-- by default. Force a known problematic locale to test strtod()/sprintf().
+local locale_tests = {
+    function ()
+        os.setlocale("cs_CZ")
+        return "Setting locale to cs_CZ (comma separator)"
+    end,
+    { json.encode, { 1.5 }, true, { '1.5' } },
+    { json.decode, { "[ 10, \"test\" ]" }, true, { { 10, "test" } } },
+    function ()
+        os.setlocale("C")
+        return "Reverting locale to POSIX"
+    end
+}
+
 print(string.format("Testing CJSON v%s\n", cjson.version))
 
 run_test_group("decode simple value", decode_simple_tests)
@@ -225,6 +240,7 @@ run_test_group("encode table", encode_table_tests)
 run_test_group("decode error", decode_error_tests)
 run_test_group("encode error", encode_error_tests)
 run_test_group("escape", escape_tests)
+run_test_group("locale", locale_tests)
 
 cjson.refuse_invalid_numbers(false)
 cjson.encode_max_depth(20)

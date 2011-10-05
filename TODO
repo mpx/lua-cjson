@@ -2,3 +2,5 @@
   - Optionally create an object for settings. Clone function.
 
 - Convert documentation into structured source format
+
+- Add setlocale() support for non-POSIX 2008 operating systems

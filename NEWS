@@ -1,3 +1,6 @@
+Version 1.0.4 (?)
+* Handle locales with a comma decimal separator
+
 Version 1.0.3 (Sep 15 2011)
 * Fixed detection of objects with numeric string keys
 * Provided work around for missing isinf() on Solaris
