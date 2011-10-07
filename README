@@ -309,6 +309,18 @@ Lua CJSON will generate an error if asked to serialise Lua functions,
 userdata, lightuserdata or threads.
 
 
+Locale handling
+---------------
+
+Lua CJSON uses strtod() and snprintf() to perform numeric conversion
+as they are usually well supported, fast and bug free.
+
+To ensure JSON encoding/decoding works correctly for locales using
+comma decimal separators, Lua CJSON must be compiled with either
+USE_POSIX_USELOCALE or USE_POSIX_SETLOCALE. See the Makefile or the
+rockspec for details.
+
+
 References
 ==========
 

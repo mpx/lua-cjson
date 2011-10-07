@@ -44,26 +44,46 @@
 
 #include "strbuf.h"
 
-#ifdef USE_POSIX_LOCALE
-/* Reset locale to POSIX for strtod() / sprintf().
+/* Support to reset locale to POSIX for strtod() / sprintf().
  * Some locales use comma as a decimal separator. This breaks JSON. */
+#ifdef USE_POSIX_USELOCALE
+
+#ifdef USE_POSIX_SETLOCALE
+#error Must not define USE_POSIX_USELOCALE and USE_POSIX_SETLOCALE simultaneously.
+#endif
 
 /* unistd.h defines _POSIX_VERSION */
 #include <unistd.h>
+
 #if _POSIX_VERSION >= 200809L
 /* POSIX.1-2008 adds threadsafe locale support */
 #include <locale.h>
 #elif defined(_POSIX_VERSION)
-/* Some pre-POSIX.1-2008 operating systems use xlocale.h instead */
+/* Some pre-POSIX.1-2008 operating systems offer xlocale.h instead */
 #include <xlocale.h>
 #else
 #error Missing _POSIX_VERSION define
-#endif
+#endif  /* _POSIX_VERSION */
+
 #define LOCALE_SET_POSIX(x) (x)->saved_locale = uselocale((x)->posix_locale)
 #define LOCALE_RESTORE(x)   uselocale((x)->saved_locale)
-#else
+
+#elif defined(USE_POSIX_SETLOCALE)
+/* ANSI C / ISO C90 implementation. Not thread-safe, affects entire process. */
+#include <locale.h>
+
+#define LOCALE_SET_POSIX(x) \
+    do { \
+        (x)->saved_locale = setlocale(LC_NUMERIC, NULL); \
+        setlocale(LC_NUMERIC, "C"); \
+    } while(0)
+#define LOCALE_RESTORE(x)   setlocale(LC_NUMERIC, (x)->saved_locale)
+
+#else   /* Do not work around locale support in strtod() / sprintf() */
+
 #define LOCALE_SET_POSIX(x) do { } while(0)
 #define LOCALE_RESTORE(x)   do { } while(0)
+
 #endif
 
 /* Some Solaris platforms are missing isinf(). */
@@ -122,9 +142,11 @@ typedef struct {
     char *char2escape[256]; /* Encoding */
 #endif
     strbuf_t encode_buf;
-#if USE_POSIX_LOCALE
+#if defined(USE_POSIX_USELOCALE)
     locale_t saved_locale;
     locale_t posix_locale;
+#elif defined(USE_POSIX_SETLOCALE)
+    const char *saved_locale;
 #endif
     char number_fmt[8];     /* "%.XXg\0" */
     int current_depth;
@@ -369,7 +391,7 @@ static int json_destroy_config(lua_State *l)
     json_config_t *cfg;
 
     cfg = lua_touserdata(l, 1);
-#ifdef USE_POSIX_LOCALE
+#ifdef USE_POSIX_USELOCALE
     if (cfg->posix_locale)
         freelocale(cfg->posix_locale);
 #endif
@@ -394,7 +416,7 @@ static void json_create_config(lua_State *l)
     lua_setmetatable(l, -2);
 
     strbuf_init(&cfg->encode_buf, 0);
-#if USE_POSIX_LOCALE
+#ifdef USE_POSIX_USELOCALE
     cfg->saved_locale = NULL;
     /* Must not lua_error() before cfg->posix_locale has been initialised */
     cfg->posix_locale = newlocale(LC_ALL_MASK, "C", NULL);

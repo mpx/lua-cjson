@@ -23,8 +23,12 @@ override CFLAGS += -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
 # Handle Solaris platforms that are missing isinf().
 #override CFLAGS +=  -DUSE_INTERNAL_ISINF
 # Handle locales that use comma as a decimal separator on locale aware
-# platforms. Requires POSIX-1.2008 support.
-override CFLAGS +=  -DUSE_POSIX_LOCALE
+# platforms (optional, but recommended).
+# USE_POSIX_USELOCALE: Linux, OSX. Thread safe. Recommended option.
+# USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
+#                      thread-safety isn't required.
+override CFLAGS +=  -DUSE_POSIX_USELOCALE
+#override CFLAGS +=  -DUSE_POSIX_SETLOCALE
 
 INSTALL ?= install
 

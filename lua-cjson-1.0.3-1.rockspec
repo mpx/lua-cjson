@@ -25,9 +25,12 @@ build = {
         cjson = {
             sources = { "lua_cjson.c", "strbuf.c" },
 -- Optional workarounds:
+-- USE_POSIX_USELOCALE: Linux, OSX. Thread safe. Recommended.
+-- USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
+--                      thread-safety isn't required.
 -- USE_INTERNAL_ISINF: Provide internal isinf() implementation. Required
 --                     on some Solaris platforms.
-            defines = { "VERSION=\"1.0.3\"" }
+            defines = { "VERSION=\"1.0.3\"", "USE_POSIX_SETLOCALE" }
         }
     },
     copy_directories = { "tests" }
