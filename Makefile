@@ -19,9 +19,9 @@ LUA_LIB_DIR ?=     $(PREFIX)/lib/lua/$(LUA_VERSION)
 CFLAGS ?=          -g -O3 -Wall -pedantic
 override CFLAGS += -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
 
-## Conditional work arounds
+## Optional work arounds
 # Handle Solaris platforms that are missing isinf().
-#override CFLAGS +=  -DMISSING_ISINF
+#override CFLAGS +=  -DUSE_INTERNAL_ISINF
 # Handle locales that use comma as a decimal separator on locale aware
 # platforms. Requires POSIX-1.2008 support.
 override CFLAGS +=  -DUSE_POSIX_LOCALE

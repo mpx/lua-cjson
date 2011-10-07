@@ -24,6 +24,9 @@ build = {
     modules = {
         cjson = {
             sources = { "lua_cjson.c", "strbuf.c" },
+-- Optional workarounds:
+-- USE_INTERNAL_ISINF: Provide internal isinf() implementation. Required
+--                     on some Solaris platforms.
             defines = { "VERSION=\"1.0.3\"" }
         }
     },

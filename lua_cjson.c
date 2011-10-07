@@ -66,8 +66,8 @@
 #define LOCALE_RESTORE(x)   do { } while(0)
 #endif
 
-#ifdef MISSING_ISINF
-/* Some Solaris platforms are missing isinf(). Define here. */
+/* Some Solaris platforms are missing isinf(). */
+#if defined(USE_INTERNAL_ISINF) || defined(MISSING_ISINF)
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
 #endif
 
