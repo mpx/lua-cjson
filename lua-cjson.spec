@@ -2,7 +2,7 @@
 %define lualibdir %{_libdir}/lua/%{luaver}
 
 Name:		lua-cjson
-Version:	1.0.3
+Version:	1.0.4
 Release:	1%{?dist}
 Summary:	JSON support for the Lua language
 
@@ -43,6 +43,9 @@ rm -rf "$RPM_BUILD_ROOT"
 
 
 %changelog
+* Wed Nov 27 2011 Mark Pulford <mark@kyne.com.au> - 1.0.4-1
+- Updated for 1.0.4
+
 * Wed Sep 15 2011 Mark Pulford <mark@kyne.com.au> - 1.0.3-1
 - Updated for 1.0.3
 

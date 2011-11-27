@@ -1,8 +1,8 @@
 package = "lua-cjson"
-version = "1.0.3-1"
+version = "1.0.4-1"
 
 source = {
-    url = "http://www.kyne.com.au/~mark/software/lua-cjson-1.0.3.zip",
+    url = "http://www.kyne.com.au/~mark/software/lua-cjson-1.0.4.zip",
 }
 
 description = {
@@ -30,7 +30,7 @@ build = {
 --                      thread-safety isn't required.
 -- USE_INTERNAL_ISINF: Provide internal isinf() implementation. Required
 --                     on some Solaris platforms.
-            defines = { "VERSION=\"1.0.3\"", "USE_POSIX_SETLOCALE" }
+            defines = { "VERSION=\"1.0.4\"", "USE_POSIX_SETLOCALE" }
         }
     },
     copy_directories = { "tests" }
