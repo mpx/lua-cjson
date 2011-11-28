@@ -4,31 +4,49 @@ LUA_VERSION =   5.1
 # See http://lua-users.org/wiki/BuildingModules for platform specific
 # details.
 
-## Linux/BSD
-PREFIX ?=          /usr/local
-LDFLAGS +=         -shared
-
-## OSX (Macports)
-#PREFIX ?=          /opt/local
-#LDFLAGS +=         -bundle -undefined dynamic_lookup
-
-LUA_INCLUDE_DIR ?= $(PREFIX)/include
-LUA_LIB_DIR ?=     $(PREFIX)/lib/lua/$(LUA_VERSION)
-
-#CFLAGS ?=          -g -Wall -pedantic -fno-inline
-CFLAGS ?=          -g -O3 -Wall -pedantic
-override CFLAGS += -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
-
-## Optional work arounds
-# Handle Solaris platforms that are missing isinf().
-#override CFLAGS +=  -DUSE_INTERNAL_ISINF
-# Handle locales that use comma as a decimal separator on locale aware
-# platforms (optional, but recommended).
+## Available Lua CJSON specific workarounds
+#
+# To ensure JSON encoding/decoding works correctly for locales using
+# comma decimal separators, Lua CJSON must be compiled with one of
+# these options:
 # USE_POSIX_USELOCALE: Linux, OSX. Thread safe. Recommended option.
 # USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
 #                      thread-safety isn't required.
-override CFLAGS +=  -DUSE_POSIX_USELOCALE
-#override CFLAGS +=  -DUSE_POSIX_SETLOCALE
+#
+# USE_INTERNAL_ISINF: Handle Solaris platforms that are missing isinf().
+
+# Tweak one of these platform sections below to suit your situation.
+
+## Linux
+PREFIX ?=           /usr/local
+CFLAGS_EXTRA ?=     -DUSE_POSIX_USELOCALE
+LDFLAGS_EXTRA ?=    -shared
+
+## FreeBSD
+#PREFIX ?=           /usr/local
+#CFLAGS_EXTRA ?=     -DUSE_POSIX_SETLOCALE
+#LUA_INCLUDE_DIR ?=  $(PREFIX)/include/lua51
+#LDFLAGS_EXTRA ?=    -shared
+
+## OSX (Macports)
+#PREFIX ?=           /opt/local
+#CFLAGS_EXTRA ?=     -DUSE_POSIX_USELOCALE
+#LDFLAGS_EXTRA ?=    -bundle -undefined dynamic_lookup
+
+## Solaris
+#PREFIX ?=           /usr/local
+#CFLAGS_EXTRA ?=     -DUSE_POSIX_SETLOCALE -DUSE_INTERNAL_ISINF
+#LDFLAGS_EXTRA ?=    -shared
+
+## End platform specific section
+
+LUA_INCLUDE_DIR ?=  $(PREFIX)/include
+LUA_LIB_DIR ?=      $(PREFIX)/lib/lua/$(LUA_VERSION)
+
+#CFLAGS ?=           -g -Wall -pedantic -fno-inline
+CFLAGS ?=           -O3 -Wall -pedantic
+override CFLAGS +=  $(CFLAGS_EXTRA) -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
+override LDFLAGS += $(LDFLAGS_EXTRA)
 
 INSTALL ?= install
 

@@ -54,9 +54,6 @@ build and install the module:
   OR
   # cp cjson.so [your_module_directory]
 
-Note: Some Solaris platforms are missing isinf(). You can work around
-      this bug by adding -DUSE_INTERNAL_ISINF to CFLAGS in the Makefile.
-
 
 RPM
 ---

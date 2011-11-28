@@ -28,8 +28,8 @@ build = {
 -- USE_POSIX_USELOCALE: Linux, OSX. Thread safe. Recommended.
 -- USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
 --                      thread-safety isn't required.
--- USE_INTERNAL_ISINF: Provide internal isinf() implementation. Required
---                     on some Solaris platforms.
+-- USE_INTERNAL_ISINF:  Provide internal isinf() implementation. Required
+--                      on some Solaris platforms.
             defines = { "VERSION=\"1.0.4\"", "USE_POSIX_SETLOCALE" }
         }
     },
