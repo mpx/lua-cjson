@@ -15,9 +15,8 @@ Features:
 
 Caveats:
 - UTF-16 and UTF-32 are not supported.
-- Multiple OS threads within a single Lua state are not currently
-  supported. However, this is an extremely uncommon configuration due
-  to performance limitations.
+- Multi-threading within a single Lua state is not supported.
+  However, this is not a recommended configuration under Lua.
 
 To obtain the latest version of Lua CJSON visit:
 
@@ -266,15 +265,15 @@ not freed until CJSON is garbage collected. Setting this option to
 cjson.encode().
 
 
-Lua / JSON limitations and CJSON
-================================
+JSON and handling under Lua CJSON
+=================================
 
-Null handling
--------------
+Nulls
+-----
 
 Lua CJSON decodes JSON "null" as a Lua lightuserdata NULL pointer.
 
-CJSON provides "cjson.null" as a convenience for comparison.
+As a convenience, "cjson.null" is provided for comparison.
 
 
 Table keys
@@ -296,7 +295,7 @@ Metamethods
 
 Lua CJSON does not use metamethods when serialising tables.
 - next() is used to iterate over tables.
-- rawget() is used when iterating over arrays.
+- rawget() is used to iterate over arrays.
 
 
 Functions, Userdata, Threads
@@ -306,8 +305,8 @@ Lua CJSON will generate an error if asked to serialise Lua functions,
 userdata, lightuserdata or threads.
 
 
-Locale handling
----------------
+Locales
+-------
 
 Lua CJSON uses strtod() and snprintf() to perform numeric conversion
 as they are usually well supported, fast and bug free.
