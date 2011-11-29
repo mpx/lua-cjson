@@ -221,7 +221,7 @@ local locale_tests = {
     end
 }
 
-print(string.format("Testing CJSON v%s\n", cjson.version))
+print(string.format("Testing Lua CJSON version %s\n", cjson.version))
 
 run_test_group("decode simple value", decode_simple_tests)
 run_test_group("encode simple value", encode_simple_tests)
