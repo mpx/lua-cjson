@@ -74,6 +74,10 @@ Extract the Lua CJSON source package into a directory and run:
 
   # cd lua-cjson-1.0.4; luarocks make
 
+LuaRocks does not support platform specific configuration for Solaris.
+On Solaris, you may need to manually uncomment "USE_INTERNAL_ISINF" in
+the rockspec before building this module.
+
 See the LuaRocks documentation for further details.
 
 
