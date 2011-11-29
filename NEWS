@@ -1,5 +1,5 @@
-Version 1.0.4 (?)
-* Handle locales with a comma decimal separator
+Version 1.0.4 (Nov 30 2011)
+* Fixed numeric conversion under locales with a comma decimal separator
 
 Version 1.0.3 (Sep 15 2011)
 * Fixed detection of objects with numeric string keys
