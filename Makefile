@@ -1,9 +1,6 @@
 CJSON_VERSION = 1.0.4
 LUA_VERSION =   5.1
 
-# See http://lua-users.org/wiki/BuildingModules for platform specific
-# details.
-
 ## Available Lua CJSON specific workarounds
 #
 # To ensure JSON encoding/decoding works correctly for locales using
@@ -13,30 +10,33 @@ LUA_VERSION =   5.1
 # USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
 #                      thread-safety isn't required.
 #
-# USE_INTERNAL_ISINF: Handle Solaris platforms that are missing isinf().
+# USE_INTERNAL_ISINF: Workaround for Solaris platforms missing isinf().
 
-# Tweak one of these platform sections below to suit your situation.
+## Common build defaults
+PREFIX =            /usr/local
+CFLAGS_EXTRA =      -DUSE_POSIX_SETLOCALE
+LDFLAGS_EXTRA =     -shared
+
+## Platform overrides
+#
+# Tweaking one of the platform sections below to suit your situation.
+#
+# See http://lua-users.org/wiki/BuildingModules for further platform
+# specific details.
 
 ## Linux
-PREFIX ?=           /usr/local
-CFLAGS_EXTRA ?=     -DUSE_POSIX_USELOCALE
-LDFLAGS_EXTRA ?=    -shared
+CFLAGS_EXTRA =      -DUSE_POSIX_USELOCALE
 
 ## FreeBSD
-#PREFIX ?=           /usr/local
-#CFLAGS_EXTRA ?=     -DUSE_POSIX_SETLOCALE
-#LUA_INCLUDE_DIR ?=  $(PREFIX)/include/lua51
-#LDFLAGS_EXTRA ?=    -shared
+#LUA_INCLUDE_DIR =   $(PREFIX)/include/lua51
 
-## OSX (Macports)
-#PREFIX ?=           /opt/local
-#CFLAGS_EXTRA ?=     -DUSE_POSIX_USELOCALE
-#LDFLAGS_EXTRA ?=    -bundle -undefined dynamic_lookup
+## MacOSX (Macports)
+#PREFIX =            /opt/local
+#CFLAGS_EXTRA =      -DUSE_POSIX_USELOCALE
+#LDFLAGS_EXTRA =     -bundle -undefined dynamic_lookup
 
 ## Solaris
-#PREFIX ?=           /usr/local
-#CFLAGS_EXTRA ?=     -DUSE_POSIX_SETLOCALE -DUSE_INTERNAL_ISINF
-#LDFLAGS_EXTRA ?=    -shared
+#CFLAGS_EXTRA =      -DUSE_POSIX_SETLOCALE -DUSE_INTERNAL_ISINF
 
 ## End platform specific section
 
