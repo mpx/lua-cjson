@@ -86,8 +86,8 @@
 
 #endif
 
-/* Some Solaris platforms are missing isinf(). */
-#if defined(USE_INTERNAL_ISINF) || defined(MISSING_ISINF)
+/* Workaround for Solaris platforms missing isinf() */
+#if !defined(isinf) && (defined(USE_INTERNAL_ISINF) || defined(MISSING_ISINF))
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
 #endif
 
