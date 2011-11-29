@@ -150,10 +150,6 @@ local encode_error_tests = {
         json.refuse_invalid_numbers(false)
         return 'Setting refuse_invalid_numbers(false).'
     end,
-    function ()
-        print('NOTE: receiving "-nan" in the following test is ok..')
-        return
-    end,
     { json.encode, { NaN }, true, { "nan" } },
     { json.encode, { Inf }, true, { "inf" } },
     function ()
