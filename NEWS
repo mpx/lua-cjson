@@ -1,3 +1,6 @@
+Version 1.0.5 (?)
+* Updated Makefile for compatibility with non-GNU make implementations
+
 Version 1.0.4 (Nov 30 2011)
 * Fixed numeric conversion under locales with a comma decimal separator
 

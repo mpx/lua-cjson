@@ -1,8 +1,5 @@
 #!/bin/sh
 
-MAKE=make
-#MAKE=gmake
-
 EGREP="grep -E"
 #EGREP="egrep"
 
@@ -28,18 +25,18 @@ echo "===== Building UTF-8 test data ====="
 ( cd tests && ./genutf8.pl; )
 
 echo "===== Cleaning old build data ====="
-$MAKE clean
+make clean
 rm -f tests/cjson.so
 
 echo "===== Testing LuaRocks build ====="
 luarocks make --local
 do_tests
 luarocks remove --local lua-cjson
-$MAKE clean
+make clean
 
 echo "===== Testing Makefile build ====="
-$MAKE
+make
 cp cjson.so tests
 do_tests
-$MAKE clean
+make clean
 rm -f tests/cjson.so

@@ -37,19 +37,19 @@ Or:
 - LuaJIT (http://www.luajit.org/)
 
 There are 3 build methods available:
-- Gmake: POSIX, OSX
+- Make: POSIX, OSX
 - RPM: Various Linux distributions
 - LuaRocks (http://www.luarocks.org/): POSIX, OSX, Windows
 
 
-Gmake
------
+Make
+----
 
 Review and update the included Makefile to suit your platform. Next,
 build and install the module:
 
-  # gmake
-  # gmake install
+  # make
+  # make install
   OR
   # cp cjson.so [your_module_directory]
 

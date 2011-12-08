@@ -12,54 +12,55 @@ LUA_VERSION =   5.1
 #
 # USE_INTERNAL_ISINF: Workaround for Solaris platforms missing isinf().
 
-## Common build defaults
+## Build defaults
 PREFIX =            /usr/local
-CFLAGS_EXTRA =      -DUSE_POSIX_SETLOCALE
-LDFLAGS_EXTRA =     -shared
+#CFLAGS =            -g -Wall -pedantic -fno-inline
+CFLAGS =            -O3 -Wall -pedantic
+CJSON_CFLAGS =      -DUSE_POSIX_SETLOCALE
+CJSON_LDFLAGS =     -shared
+LUA_INCLUDE_DIR =   $(PREFIX)/include
+LUA_MODULE_DIR =    $(PREFIX)/lib/lua/$(LUA_VERSION)
+INSTALL_CMD =       install
 
 ## Platform overrides
 #
-# Tweaking one of the platform sections below to suit your situation.
+# Tweak one of the platform sections below to suit your situation.
 #
 # See http://lua-users.org/wiki/BuildingModules for further platform
 # specific details.
 
 ## Linux
-CFLAGS_EXTRA =      -DUSE_POSIX_USELOCALE
+#CJSON_CFLAGS =      -DUSE_POSIX_USELOCALE
 
 ## FreeBSD
 #LUA_INCLUDE_DIR =   $(PREFIX)/include/lua51
 
 ## MacOSX (Macports)
 #PREFIX =            /opt/local
-#CFLAGS_EXTRA =      -DUSE_POSIX_USELOCALE
-#LDFLAGS_EXTRA =     -bundle -undefined dynamic_lookup
+#CJSON_CFLAGS =      -DUSE_POSIX_USELOCALE
+#CJSON_LDFLAGS =     -bundle -undefined dynamic_lookup
 
 ## Solaris
-#CFLAGS_EXTRA =      -DUSE_POSIX_SETLOCALE -DUSE_INTERNAL_ISINF
+#CJSON_CFLAGS =      -DUSE_POSIX_SETLOCALE -DUSE_INTERNAL_ISINF
 
 ## End platform specific section
 
-LUA_INCLUDE_DIR ?=  $(PREFIX)/include
-LUA_LIB_DIR ?=      $(PREFIX)/lib/lua/$(LUA_VERSION)
-
-#CFLAGS ?=           -g -Wall -pedantic -fno-inline
-CFLAGS ?=           -O3 -Wall -pedantic
-override CFLAGS +=  $(CFLAGS_EXTRA) -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
-override LDFLAGS += $(LDFLAGS_EXTRA)
-
-INSTALL ?= install
+CJSON_CFLAGS +=     -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
+OBJS :=             lua_cjson.o strbuf.o
 
 .PHONY: all clean install package
 
 all: cjson.so
 
-cjson.so: lua_cjson.o strbuf.o
-	$(CC) $(LDFLAGS) -o $@ $^
+.c.o:
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CJSON_CFLAGS) -o $@ $<
 
-install:
-	$(INSTALL) -d $(DESTDIR)/$(LUA_LIB_DIR)
-	$(INSTALL) cjson.so $(DESTDIR)/$(LUA_LIB_DIR) 
+cjson.so: $(OBJS)
+	$(CC) $(LDFLAGS) $(CJSON_LDFLAGS) -o $@ $(OBJS)
+
+install: cjson.so
+	mkdir -p $(DESTDIR)/$(LUA_MODULE_DIR)
+	$(INSTALL_CMD) cjson.so $(DESTDIR)/$(LUA_MODULE_DIR)
 
 clean:
 	rm -f *.o *.so

@@ -24,12 +24,13 @@ Lua CJSON provides fast, standards compliant JSON support for Lua.
 
 
 %build
-make %{?_smp_mflags} CFLAGS="%{optflags}" LUA_INCLUDE_DIR="%{_includedir}"
+make %{?_smp_mflags} CFLAGS="%{optflags}" CJSON_CFLAGS="-DUSE_POSIX_USELOCALE" \
+	LUA_INCLUDE_DIR="%{_includedir}"
 
 
 %install
 rm -rf "$RPM_BUILD_ROOT"
-make install DESTDIR="$RPM_BUILD_ROOT" LUA_LIB_DIR="%{lualibdir}"
+make install DESTDIR="$RPM_BUILD_ROOT" LUA_MODULE_DIR="%{lualibdir}"
 
 
 %clean
