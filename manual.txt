@@ -1,0 +1,460 @@
+Lua CJSON Manual
+================
+Mark Pulford <mark@kyne.com.au>
+v1.0.4, November 30 2011
+
+Overview
+--------
+
+Lua CJSON provides fast JSON parsing and encoding support for Lua.
+
+.Features
+- More than 10x to 20x faster than the efficient pure Lua JSON modules.
+- Full support for JSON with UTF-8, including decoding surrogate
+  pairs.
+- Optional run-time support for common exceptions to the JSON
+  specification (NaN, Inf,..).
+
+.Caveats
+- UTF-16 and UTF-32 are not supported.
+- Multi-threading within a single Lua state is not supported.
+  However, this is not a recommended configuration under Lua.
+
+Lua CJSON is covered by the MIT license. See the file +LICENSE+ for
+details.
+
+The latest version of this software is available from the 
+http://www.kyne.com.au/~mark/software/lua-cjson.php[Lua CJSON website].
+
+Feel free to email me if you have any patches, suggestions, or
+comments.
+
+
+Installation Methods
+--------------------
+
+Lua CJSON requires either http://www.lua.org[Lua] or
+http://www.luajit.org[LuaJIT] to build.
+
+There are 3 build methods available:
+
+- Make: POSIX, OSX
+- RPM: Various Linux distributions
+- http://www.luarocks.org[LuaRocks]: POSIX, OSX, Windows
+
+
+Make
+~~~~
+
+Review and update the included Makefile to suit your platform. Next,
+build and install the module:
+
+[source,sh]
+-----------
+make install
+-----------
+
+Or install manually:
+
+[source,sh]
+-----------
+make
+cp cjson.so $your_lua_module_directory
+-----------
+
+
+RPM
+~~~
+
+Linux distributions using RPM should be able to create a package via
+the included RPM spec file. Install the +rpm-build+ package (or
+similar) then:
+
+[source,sh]
+-----------
+rpmbuild -tb lua-cjson-1.0.4.tar.gz
+rpm -Uvh $newly_built_lua_cjson_rpm
+-----------
+
+
+LuaRocks
+~~~~~~~~
+
+http://luarocks.org[LuaRocks] can be used to install and manage Lua
+modules on a wide range of platforms (including Windows).
+
+Extract the Lua CJSON source package into a directory and run:
+
+[source,sh]
+-----------
+cd lua-cjson-1.0.4
+luarocks make
+-----------
+
+LuaRocks does not support platform specific configuration for Solaris.
+On Solaris, you may need to manually uncomment +USE_INTERNAL_ISINF+ in
+the rockspec before building this module.
+
+See the http://luarocks.org/en/Documentation[LuaRocks documentation] for
+further details.
+
+
+Lua API
+-------
+
+Synopsis
+~~~~~~~~
+
+[source,lua]
+------------
+require "cjson"
+-- Or:
+local cjson = require "cjson"
+ 
+-- Translate Lua value to/from JSON
+text = cjson.encode(value)
+value = cjson.decode(text)
+ 
+-- Get and/or set Lua CJSON configuration
+setting = cjson.refuse_invalid_numbers([setting])
+depth = cjson.encode_max_depth([depth])
+convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
+keep = cjson.encode_keep_buffer([keep])
+------------
+
+
+cjson.encode
+~~~~~~~~~~~~
+
+[source,lua]
+------------
+json_text = cjson.encode(value)
+------------
+
++cjson.encode+ will serialise a Lua value into a string containing the
+JSON representation.
+
++cjson.encode+ supports the following types:
+
+- +boolean+
+- +lightuserdata+ (NULL value only)
+- +nil+
+- +number+
+- +string+
+- +table+
+
+The remaining Lua types cannot be serialised:
+
+- +function+
+- +lightuserdata+ (non-NULL values)
+- +thread+
+- +userdata+
+
+Numbers are encoded using the standard Lua number format.
+
+Lua CJSON will escape the following characters within each string:
+
+- Control characters (ASCII 0 - 31)
+- Double quote (ASCII 34)
+- Forward slash (ASCII 47)
+- Blackslash (ASCII 92)
+- Delete (ASCII 127)
+
+All other characters are passed transparently. Any UTF-8 error
+checking must be done by the application.
+
+Lua CJSON uses a heuristic to determine whether to encode a Lua table
+as a JSON array or an object. A Lua table which only has positive
+integers (>0) keys of type +number+ will be encoded as a JSON array.
+All other tables will be encoded as a JSON object.
+
+Missing entries from sparse Lua arrays are encoded as +null+. For
+example:
+
+.Lua input
+[source,lua]
+------------
+{ [3] = "data" }
+------------
+
+.JSON output
+[source,javascript]
+-------------------
+[null,null,"data"]
+-------------------
+
+[NOTE]
+Standards compliant JSON must be encapsulated in either an
+object (+{}+) or an array (+[]+). Hence a table must be passed to
++cjson.encode+ to generate standards compliant JSON output.
+
+By default, the following will generate errors:
+
+- Excessively <<sparse_arrays,sparse arrays>>
+- More than 20 nested tables
+- Invalid numbers (NaN, Infinity)
+
+These defaults can be changed with:
+
+- +cjson.encode_sparse_array+
+- +cjson.encode_max_depth+
+- +cjson.refuse_invalid_numbers+
+
+.Example: encoding
+[source,lua]
+------------
+data_obj = { true, { foo = "bar" } }
+data_json = cjson.encode(data_obj)
+------------
+
+
+cjson.decode
+~~~~~~~~~~~~
+
+[source,lua]
+------------
+value = cjson.decode(json_text)
+------------
+
++cjson.decode+ will deserialise any UTF-8 JSON string into a Lua value
+or table. It may return any of the types that +cjson.encode+ supports.
+
+UTF-16 and UTF-32 JSON strings are not supported.
+
++cjson.decode+ requires that any NULL (ASCII 0) and double quote
+(ASCII 34) characters are escaped within strings. All escape codes
+will be decoded and other characters will be passed transparently.
+UTF-8 characters are not validated during decoding and should be
+checked elsewhere if required.
+
+JSON +null+ will be converted to a NULL +lightuserdata+ value. This
+can be compared with +cjson.null+ for convenience.
+
+By default, _invalid_ numbers (NaN, Infinity, Hexidecimal) will be
+decoded. This default can be changed with
++cjson.refuse_invalid_numbers+.
+
+.Example: decoding
+[source,lua]
+------------
+data_json = '[ true, { "foo": "bar" } ]'
+data_obj = cjson.decode(data_json)
+------------
+
+
+cjson.refuse_invalid_numbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+setting = cjson.refuse_invalid_numbers([setting])
+-- "setting" must be on of:
+--       false, "encode", "decode", "both", true
+------------
+
+Lua CJSON considers numbers which are outside the JSON specification to be
+_invalid_:
+
+- Infinity
+- NaN
+- Hexadecimal numbers
+
+By default Lua CJSON will decode _invalid_ numbers, but will refuse to
+encode them.
+
+This setting can be configured separately for encoding and/or
+decoding:
+
+Enabled::
+  an error will be generated if an _invalid_ number is found.
+Disabled (encoding)::
+  NaN and Infinity can be encoded.
+Disabled (decoding)::
+  All numbers supported by +strtod+(3) will be parsed.
+
+
+[[sparse_arrays]]
+cjson.encode_sparse_array
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
+-- "convert" must be a boolean. Default: false.
+-- "ratio" must be a positive integer (>0). Default: 2
+-- "safe" must be a positive integer (>0). Default: 10
+------------
+
+A Lua array is sparse if it is missing a value for at least 1 index.
+Lua CJSON encodes missing values as JSON +null+. Eg, Lua array:
+
+.Lua input
+[source,lua]  
+------------
+{ [3] = "sparse" }
+------------
+
+.JSON output
+[source,javascript]
+-------------------
+[null,null,"sparse"]
+-------------------
+
+Lua CJSON detects excessively sparse arrays by comparing the number of
+items in a Lua array with the maximum index. In particular:
+
+-----
+maximum index > safe AND maximum index > array_items * ratio
+-----
+
+By default, attempting to encode excessively sparse arrays will
+generate an error.
+
+If _convert_ is set to +true+, excessively sparse arrays will be
+encoded as a JSON object:
+
+.Lua input
+[source,lua]
+{ [1000] = "excessively sparse" }
+
+.JSON output
+[source,javascript]
+{"1000":"excessively sparse"}
+
+Setting +ratio+ to +0+ disables checking for excessively sparse arrays.
+
+
+cjson.encode_max_depth
+~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+depth = cjson.encode_max_depth([depth])
+-- "depth" must be a positive integer (>0).
+------------
+
+By default, Lua CJSON will reject data structure with more than 20 nested
+tables.
+
+This check prevents a deeply nested or recursive data structure from
+crashing the application.
+
+.Example
+[source,lua]
+a = {}; b = { a }; a[1] = b
+
+
+cjson.encode_number_precision
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+precision = cjson.encode_number_precision([precision])
+-- "precision" must be between 1 and 14 (inclusive)
+------------
+
+By default, Lua CJSON will output 14 significant digits when
+converting a number to text.
+
+Reducing number precision to _3_ can improve performance of number
+heavy JSON conversions by up to 50%.
+
+
+cjson.keep_encode_buffer
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+keep = cjson.keep_encode_buffer([keep])
+-- "keep" must be a boolean
+------------
+
+By default, Lua CJSON will reuse the JSON encoding buffer to improve
+performance. The buffer will grow to the largest size required and is
+not freed until the Lua CJSON module is garbage collected. Setting this
+option to +false+ will cause the buffer to be freed after each call to
++cjson.encode+.
+
+
+cjson.version
+~~~~~~~~~~~~~
+
+[source,lua]
+------------
+ver = cjson.version
+-- variable containing the package version (1.0.4)
+------------
+
+FIXME
+
+
+JSON and handling under Lua CJSON
+---------------------------------
+
+Nulls
+~~~~~
+
+Lua CJSON decodes JSON +null+ as a Lua lightuserdata NULL pointer.
+
+As a convenience, +cjson.null+ is provided for comparison.
+
+
+Table keys
+~~~~~~~~~~
+
+If all Lua table keys are type +number+ (not +string+), Lua CJSON will
+encode the table as a JSON array. See
+<<sparse_arrays,cjson.encode_sparse_array>> above for more details.
+
+All other tables will be encoded as a JSON object.
+
+JSON requires that object keys must be type string. +cjson.encode+
+will convert numeric keys to a string, and other non-string types will
+generate an error.
+
+[CAUTION]
+=========
+Care must be taken when encoding/decoding objects which contain keys of type
++number+.
+[source,lua]
+------------
+val = cjson.decode(cjson.encode{[1] = "1", a = "a"})
+-- Returns: { ["1"] = "1", ...
+-- NOT:     { [1] = "1", ...
+------------
+=========
+
+Metamethods
+~~~~~~~~~~~
+
+Lua CJSON does not use metamethods when serialising tables.
+
+- +rawget+ is used to iterate over Lua arrays.
+- +next+ is used to iterate over Lua objects.
+
+
+Functions, Userdata, Threads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lua CJSON will generate an error if asked to serialise Lua functions,
+userdata, lightuserdata or threads.
+
+
+Locales
+~~~~~~~
+
+Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric conversion
+as they are usually well supported, fast and bug free.
+
+To ensure JSON encoding/decoding works correctly for locales using
+comma decimal separators, Lua CJSON must be compiled with either
++USE_POSIX_USELOCALE+ or +USE_POSIX_SETLOCALE+. See the +Makefile+ or the
+rockspec for details.
+
+
+[sect1]
+References
+----------
+
+- http://tools.ietf.org/html/rfc4627[RFC 4627]
+- http://www.json.org/[JSON website]

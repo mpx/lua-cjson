@@ -48,9 +48,11 @@ INSTALL_CMD =       install
 CJSON_CFLAGS +=     -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
 OBJS :=             lua_cjson.o strbuf.o
 
-.PHONY: all clean install package
+.PHONY: all clean install package doc
 
 all: cjson.so
+
+doc: manual.html
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CJSON_CFLAGS) -o $@ $<
@@ -61,6 +63,9 @@ cjson.so: $(OBJS)
 install: cjson.so
 	mkdir -p $(DESTDIR)/$(LUA_MODULE_DIR)
 	$(INSTALL_CMD) cjson.so $(DESTDIR)/$(LUA_MODULE_DIR)
+
+manual.html: manual.txt
+	asciidoc -n -a toc manual.txt
 
 clean:
 	rm -f *.o *.so
