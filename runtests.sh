@@ -1,7 +1,10 @@
 #!/bin/sh
 
 EGREP="grep -E"
-#EGREP="egrep"
+
+PLATFORM="`uname -s`"
+
+[ "$PLATFORM" = "SunOS" ] && EGREP=egrep
 
 set -e
 
@@ -40,3 +43,16 @@ cp cjson.so tests
 do_tests
 make clean
 rm -f tests/cjson.so
+
+if [ "$PLATFORM" = "Linux" ]
+then
+	echo "===== Testing RPM build ====="
+	make package
+	LOG=/tmp/build.$$
+	rpmbuild -tb lua-cjson-1.0.4.tar.gz | tee "$LOG"
+	RPM="`awk '/^Wrote: / && ! /debuginfo/ { print $2}' < "$LOG"`"
+	sudo -- rpm -Uvh \"$RPM\"
+	do_tests
+	sudo -- rpm -e lua-cjson
+	rm -f "$LOG"
+fi
