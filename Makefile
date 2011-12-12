@@ -45,7 +45,7 @@ INSTALL_CMD =       install
 
 ## End platform specific section
 
-CJSON_CFLAGS +=     -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\"
+BUILD_CFLAGS =      -fpic -I$(LUA_INCLUDE_DIR) -DVERSION=\"$(CJSON_VERSION)\" $(CJSON_CFLAGS)
 OBJS :=             lua_cjson.o strbuf.o
 
 .PHONY: all clean install package doc
@@ -55,7 +55,7 @@ all: cjson.so
 doc: manual.html
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(CJSON_CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(BUILD_CFLAGS) -o $@ $<
 
 cjson.so: $(OBJS)
 	$(CC) $(LDFLAGS) $(CJSON_LDFLAGS) -o $@ $(OBJS)
