@@ -54,6 +54,16 @@ do_tests
 make clean
 rm -f tests/cjson.so
 
+echo "===== Testing Cmake build ====="
+mkdir build
+cd build
+cmake ..
+make
+cd ..
+cp build/cjson.so tests
+do_tests
+rm -rf build tests/cjson.so
+
 if [ "$PLATFORM" = "Linux" ]
 then
 	echo "===== Testing RPM build ====="
