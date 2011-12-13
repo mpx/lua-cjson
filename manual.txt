@@ -123,6 +123,40 @@ keep = cjson.encode_keep_buffer([keep])
 ------------
 
 
+cjson.decode
+~~~~~~~~~~~~
+
+[source,lua]
+------------
+value = cjson.decode(json_text)
+------------
+
++cjson.decode+ will deserialise any UTF-8 JSON string into a Lua value
+or table. It may return any of the types that +cjson.encode+ supports.
+
+UTF-16 and UTF-32 JSON strings are not supported.
+
++cjson.decode+ requires that any NULL (ASCII 0) and double quote
+(ASCII 34) characters are escaped within strings. All escape codes
+will be decoded and other characters will be passed transparently.
+UTF-8 characters are not validated during decoding and should be
+checked elsewhere if required.
+
+JSON +null+ will be converted to a NULL +lightuserdata+ value. This
+can be compared with +cjson.null+ for convenience.
+
+By default, _invalid_ numbers (NaN, Infinity, Hexidecimal) will be
+decoded. This default can be changed with
++cjson.refuse_invalid_numbers+.
+
+.Example: decoding
+[source,lua]
+------------
+data_json = '[ true, { "foo": "bar" } ]'
+data_obj = cjson.decode(data_json)
+------------
+
+
 cjson.encode
 ~~~~~~~~~~~~
 
@@ -208,69 +242,40 @@ data_json = cjson.encode(data_obj)
 ------------
 
 
-cjson.decode
-~~~~~~~~~~~~
+cjson.encode_max_depth
+~~~~~~~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
-value = cjson.decode(json_text)
+depth = cjson.encode_max_depth([depth])
+-- "depth" must be a positive integer (>0).
 ------------
 
-+cjson.decode+ will deserialise any UTF-8 JSON string into a Lua value
-or table. It may return any of the types that +cjson.encode+ supports.
+By default, Lua CJSON will reject data structure with more than 20 nested
+tables.
 
-UTF-16 and UTF-32 JSON strings are not supported.
+This check prevents a deeply nested or recursive data structure from
+crashing the application.
 
-+cjson.decode+ requires that any NULL (ASCII 0) and double quote
-(ASCII 34) characters are escaped within strings. All escape codes
-will be decoded and other characters will be passed transparently.
-UTF-8 characters are not validated during decoding and should be
-checked elsewhere if required.
-
-JSON +null+ will be converted to a NULL +lightuserdata+ value. This
-can be compared with +cjson.null+ for convenience.
-
-By default, _invalid_ numbers (NaN, Infinity, Hexidecimal) will be
-decoded. This default can be changed with
-+cjson.refuse_invalid_numbers+.
-
-.Example: decoding
+.Example
 [source,lua]
-------------
-data_json = '[ true, { "foo": "bar" } ]'
-data_obj = cjson.decode(data_json)
-------------
+a = {}; b = { a }; a[1] = b
 
 
-cjson.refuse_invalid_numbers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cjson.encode_number_precision
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
-setting = cjson.refuse_invalid_numbers([setting])
--- "setting" must be on of:
---       false, "encode", "decode", "both", true
+precision = cjson.encode_number_precision([precision])
+-- "precision" must be between 1 and 14 (inclusive)
 ------------
 
-Lua CJSON considers numbers which are outside the JSON specification to be
-_invalid_:
+By default, Lua CJSON will output 14 significant digits when
+converting a number to text.
 
-- Infinity
-- NaN
-- Hexadecimal numbers
-
-By default Lua CJSON will decode _invalid_ numbers, but will refuse to
-encode them.
-
-This setting can be configured separately for encoding and/or
-decoding:
-
-Enabled::
-  an error will be generated if an _invalid_ number is found.
-Disabled (encoding)::
-  NaN and Infinity can be encoded.
-Disabled (decoding)::
-  All numbers supported by +strtod+(3) will be parsed.
+Reducing number precision to _3_ can improve performance of number
+heavy JSON conversions by up to 50%.
 
 
 [[sparse_arrays]]
@@ -324,42 +329,6 @@ encoded as a JSON object:
 Setting +ratio+ to +0+ disables checking for excessively sparse arrays.
 
 
-cjson.encode_max_depth
-~~~~~~~~~~~~~~~~~~~~~~
-
-[source,lua]
-------------
-depth = cjson.encode_max_depth([depth])
--- "depth" must be a positive integer (>0).
-------------
-
-By default, Lua CJSON will reject data structure with more than 20 nested
-tables.
-
-This check prevents a deeply nested or recursive data structure from
-crashing the application.
-
-.Example
-[source,lua]
-a = {}; b = { a }; a[1] = b
-
-
-cjson.encode_number_precision
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-[source,lua]
-------------
-precision = cjson.encode_number_precision([precision])
--- "precision" must be between 1 and 14 (inclusive)
-------------
-
-By default, Lua CJSON will output 14 significant digits when
-converting a number to text.
-
-Reducing number precision to _3_ can improve performance of number
-heavy JSON conversions by up to 50%.
-
-
 cjson.keep_encode_buffer
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -374,6 +343,37 @@ performance. The buffer will grow to the largest size required and is
 not freed until the Lua CJSON module is garbage collected. Setting this
 option to +false+ will cause the buffer to be freed after each call to
 +cjson.encode+.
+
+
+cjson.refuse_invalid_numbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+setting = cjson.refuse_invalid_numbers([setting])
+-- "setting" must be on of:
+--       false, "encode", "decode", "both", true
+------------
+
+Lua CJSON considers numbers which are outside the JSON specification to be
+_invalid_:
+
+- Infinity
+- NaN
+- Hexadecimal numbers
+
+By default Lua CJSON will decode _invalid_ numbers, but will refuse to
+encode them.
+
+This setting can be configured separately for encoding and/or
+decoding:
+
+Enabled::
+  an error will be generated if an _invalid_ number is found.
+Disabled (encoding)::
+  NaN and Infinity can be encoded.
+Disabled (decoding)::
+  All numbers supported by +strtod+(3) will be parsed.
 
 
 cjson.version
