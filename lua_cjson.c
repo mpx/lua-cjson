@@ -44,6 +44,10 @@
 
 #include "strbuf.h"
 
+#ifndef CJSON_VERSION
+#define CJSON_VERSION   "1.0.4"
+#endif
+
 /* Support to reset locale to POSIX for strtod() / sprintf().
  * Some locales use comma as a decimal separator. This breaks JSON. */
 #ifdef USE_POSIX_USELOCALE
@@ -1338,7 +1342,7 @@ int luaopen_cjson(lua_State *l)
     lua_setfield(l, -2, "null");
 
     /* Set cjson.version */
-    lua_pushliteral(l, VERSION);
+    lua_pushliteral(l, CJSON_VERSION);
     lua_setfield(l, -2, "version");
 
     /* Return cjson table */

@@ -31,7 +31,7 @@ build = {
 -- USE_INTERNAL_ISINF:  Provide internal isinf() implementation. Required
 --                      on some Solaris platforms.
             defines = {
-                "VERSION=\"1.0.4\"", "USE_POSIX_SETLOCALE",
+                "USE_POSIX_SETLOCALE",
 -- LuaRocks does not support platform specific configuration for Solaris.
 -- Uncomment the line below on Solaris platforms.
 --                "USE_INTERNAL_ISINF"
@@ -41,10 +41,10 @@ build = {
     -- Override default build options (per platform)
     platforms = {
         linux = { modules = { cjson = { defines = {
-            [2] = "USE_POSIX_USELOCALE"
+            [1] = "USE_POSIX_USELOCALE"
         } } } },
         macosx = { modules = { cjson = { defines = {
-            [2] = "USE_POSIX_USELOCALE"
+            [1] = "USE_POSIX_USELOCALE"
         } } } }
     },
     copy_directories = { "tests" }
