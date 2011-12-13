@@ -38,9 +38,33 @@ http://www.luajit.org[LuaJIT] to build.
 
 There are 3 build methods available:
 
-- Make: POSIX, OSX
-- RPM: Various Linux distributions
-- http://www.luarocks.org[LuaRocks]: POSIX, OSX, Windows
+Make::
+  POSIX (including Linux, BSD, Mac OSX & Solaris)
+RPM::
+  Linux
+LuaRocks::
+  POSIX (including Linux, BSD, Mac OSX & Solaris), Windows
+
+
+Build configuration overview
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric
+conversion as they are usually well supported, fast and bug free.
+
+To ensure JSON encoding/decoding works correctly for locales using
+comma decimal separators, Lua CJSON must be compiled with one of the
+following ++#define++s:
+
+USE_POSIX_USELOCALE::
+  Thread safe. Supported by Linux and Mac OSX. Recommended where available.
+USE_POSIX_SETLOCALE::
+  Works on all ANSI C platforms. May be used when thread-safety isn't required.
+
+Also available:
+
+USE_INTERNAL_ISINF::
+  Workaround for Solaris platforms missing isinf().
 
 
 Make
@@ -91,6 +115,7 @@ cd lua-cjson-1.0.4
 luarocks make
 -----------
 
+[NOTE]
 LuaRocks does not support platform specific configuration for Solaris.
 On Solaris, you may need to manually uncomment +USE_INTERNAL_ISINF+ in
 the rockspec before building this module.
@@ -99,8 +124,8 @@ See the http://luarocks.org/en/Documentation[LuaRocks documentation] for
 further details.
 
 
-Lua API
--------
+API (Functions)
+---------------
 
 Synopsis
 ~~~~~~~~
@@ -156,6 +181,11 @@ data_json = '[ true, { "foo": "bar" } ]'
 data_obj = cjson.decode(data_json)
 ------------
 
+[CAUTION]
+Care must be taken when after decoding objects with numeric keys. Each
+numeric keys will be stored as a Lua +string+. Any code assuming type
++number+ may break.
+
 
 cjson.encode
 ~~~~~~~~~~~~
@@ -177,7 +207,7 @@ JSON representation.
 - +string+
 - +table+
 
-The remaining Lua types cannot be serialised:
+The remaining Lua types will generate an error:
 
 - +function+
 - +lightuserdata+ (non-NULL values)
@@ -216,6 +246,16 @@ example:
 -------------------
 [null,null,"data"]
 -------------------
+
+Lua CJSON does not use metamethods when serialising tables.
+
+- +rawget+ is used to iterate over Lua arrays.
+- +next+ is used to iterate over Lua objects.
+
+JSON object keys are always strings. +cjson.encode+ can only handle
+table keys which are type +number+ or +string+. All other types will
+generate an error.
+
 
 [NOTE]
 Standards compliant JSON must be encapsulated in either an
@@ -376,80 +416,21 @@ Disabled (decoding)::
   All numbers supported by +strtod+(3) will be parsed.
 
 
+API (Variables)
+---------------
+
+cjson.null
+~~~~~~~~~~
+
+Lua CJSON decodes JSON +null+ as a Lua lightuserdata NULL pointer.
++cjson.null+ can be used for comparison.
+
+
 cjson.version
 ~~~~~~~~~~~~~
 
-[source,lua]
-------------
-ver = cjson.version
--- variable containing the package version (1.0.4)
-------------
-
-FIXME
-
-
-JSON and handling under Lua CJSON
----------------------------------
-
-Nulls
-~~~~~
-
-Lua CJSON decodes JSON +null+ as a Lua lightuserdata NULL pointer.
-
-As a convenience, +cjson.null+ is provided for comparison.
-
-
-Table keys
-~~~~~~~~~~
-
-If all Lua table keys are type +number+ (not +string+), Lua CJSON will
-encode the table as a JSON array. See
-<<sparse_arrays,cjson.encode_sparse_array>> above for more details.
-
-All other tables will be encoded as a JSON object.
-
-JSON requires that object keys must be type string. +cjson.encode+
-will convert numeric keys to a string, and other non-string types will
-generate an error.
-
-[CAUTION]
-=========
-Care must be taken when encoding/decoding objects which contain keys of type
-+number+.
-[source,lua]
-------------
-val = cjson.decode(cjson.encode{[1] = "1", a = "a"})
--- Returns: { ["1"] = "1", ...
--- NOT:     { [1] = "1", ...
-------------
-=========
-
-Metamethods
-~~~~~~~~~~~
-
-Lua CJSON does not use metamethods when serialising tables.
-
-- +rawget+ is used to iterate over Lua arrays.
-- +next+ is used to iterate over Lua objects.
-
-
-Functions, Userdata, Threads
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Lua CJSON will generate an error if asked to serialise Lua functions,
-userdata, lightuserdata or threads.
-
-
-Locales
-~~~~~~~
-
-Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric conversion
-as they are usually well supported, fast and bug free.
-
-To ensure JSON encoding/decoding works correctly for locales using
-comma decimal separators, Lua CJSON must be compiled with either
-+USE_POSIX_USELOCALE+ or +USE_POSIX_SETLOCALE+. See the +Makefile+ or the
-rockspec for details.
+The version number of the Lua CJSON module in use can be found in
++cjson.version+.
 
 
 [sect1]
