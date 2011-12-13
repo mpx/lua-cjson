@@ -245,4 +245,12 @@ for i = 1, #arg do
              true, { true })
 end
 
+local pass, total = run_test_summary()
+
+print(string.format("==> Summary: %d/%d tests succeeded", pass, total))
+
+if pass ~= total then
+    os.exit(1)
+end
+
 -- vi:ai et sw=4 ts=4:

@@ -176,6 +176,13 @@ function compare_values(val1, val2)
     return true
 end
 
+local test_count_pass = 0
+local test_count_total = 0
+
+function run_test_summary()
+    return test_count_pass, test_count_total
+end
+
 function run_test(testname, func, input, should_work, output)
     local function status_line(name, status, value)
         local statusmap = { [true] = ":success", [false] = ":error" }
@@ -191,10 +198,13 @@ function run_test(testname, func, input, should_work, output)
     local correct = false
     if success == should_work and compare_values(result, output) then
         correct = true
+        test_count_pass = test_count_pass + 1
     end
+    test_count_total = test_count_total + 1
 
     local teststatus = { [true] = "PASS", [false] = "FAIL" }
-    print("==> Test " .. testname .. ": " .. teststatus[correct])
+    print(string.format("==> Test[%d] / %s: %s",
+        test_count_total, testname, teststatus[correct]))
 
     status_line("Input", nil, input)
     if not correct then
@@ -216,7 +226,7 @@ function run_test_group(testgroup, tests)
     end
 
     local function test_id(group, id)
-        return string.format("%s [%d]", group, id)
+        return string.format("%s[%d]", group, id)
     end
 
     for k, v in ipairs(tests) do

@@ -1,17 +1,20 @@
 #!/bin/sh
 
-EGREP="grep -E"
-
 PLATFORM="`uname -s`"
 
-[ "$PLATFORM" = "SunOS" ] && EGREP=egrep
-
 set -e
+
+# Portable "ggrep -A" replacement
+# contextgrep PATTERN POST_MATCH_LINES
+contextgrep() {
+	awk "/$1/ { count = ($2 + 1) } count { count--; print }"
+}
 
 do_tests() {
     echo
     cd tests
-    ./test.lua | $EGREP 'version|PASS|FAIL'
+    lua -e 'require "cjson"; print("Testing Lua CJSON version " .. cjson.version)'
+    ./test.lua | contextgrep 'FAIL|Summary' 3 | grep -v PASS | cut -c -70
     cd ..
 }
 
