@@ -19,7 +19,7 @@ Lua CJSON provides fast JSON parsing and encoding support for Lua.
 - Multi-threading within a single Lua state is not supported.
   However, this is not a recommended configuration under Lua.
 
-Lua CJSON is covered by the MIT license. See the file +LICENSE+ for
+Lua CJSON is covered by the MIT license. Review the file +LICENSE+ for
 details.
 
 The latest version of this software is available from the 
@@ -35,14 +35,16 @@ Installation Methods
 Lua CJSON requires either http://www.lua.org[Lua] or
 http://www.luajit.org[LuaJIT] to build.
 
-There are 3 build methods available:
+There are 4 build methods available:
 
 Make::
-  POSIX (including Linux, BSD, Mac OSX & Solaris)
+  Unix (including Linux, BSD, Mac OSX & Solaris)
+CMake::
+  Unix, Windows
 RPM::
   Linux
 LuaRocks::
-  POSIX (including Linux, BSD, Mac OSX & Solaris), Windows
+  Unix, Windows
 
 
 Build options (#define)
@@ -52,7 +54,7 @@ Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric
 conversion as they are usually well supported, fast and bug free. To
 ensure JSON encoding/decoding works correctly for locales using comma
 decimal separators, Lua CJSON may optionally be compiled with one of
-the following (+#define+):
+the following preprocessor macros:
 
 USE_POSIX_USELOCALE::
   Thread safe. Supported by Linux and Mac OSX. Recommended where available.
@@ -79,6 +81,23 @@ Or install manually:
 [source,sh]
 make
 cp cjson.so $your_lua_module_directory
+
+
+CMake
+~~~~~
+
+http://www.cmake.org[CMake] can generate build configuration for many different
+platforms (including Unix and Windows).
+
+[source,sh]
+mkdir build
+cd build
+cmake ..
+make
+cp cjson.so $your_lua_module_directory
+
+Review the http://www.cmake.org/cmake/help/documentation.html[CMake documentation]
+for further details.
 
 
 RPM
@@ -110,8 +129,8 @@ LuaRocks does not support platform specific configuration for Solaris.
 On Solaris, you may need to manually uncomment +USE_INTERNAL_ISINF+ in
 the rockspec before building this module.
 
-See the http://luarocks.org/en/Documentation[LuaRocks documentation] for
-further details.
+Review the http://luarocks.org/en/Documentation[LuaRocks documentation]
+for further details.
 
 
 API (Functions)
