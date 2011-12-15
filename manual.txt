@@ -45,20 +45,19 @@ LuaRocks::
   POSIX (including Linux, BSD, Mac OSX & Solaris), Windows
 
 
-Build configuration overview
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Build options (#define)
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric
-conversion as they are usually well supported, fast and bug free.
-
-To ensure JSON encoding/decoding works correctly for locales using
-comma decimal separators, Lua CJSON must be compiled with one of the
-following ++#define++s:
+conversion as they are usually well supported, fast and bug free. To
+ensure JSON encoding/decoding works correctly for locales using comma
+decimal separators, Lua CJSON may optionally be compiled with one of
+the following (+#define+):
 
 USE_POSIX_USELOCALE::
   Thread safe. Supported by Linux and Mac OSX. Recommended where available.
 USE_POSIX_SETLOCALE::
-  Works on all ANSI C platforms. May be used when thread-safety isn't required.
+  Works on all ANSI C platforms. Only use with single threaded programs.
 
 Also available:
 
