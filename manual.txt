@@ -72,17 +72,13 @@ Review and update the included Makefile to suit your platform. Next,
 build and install the module:
 
 [source,sh]
------------
 make install
------------
 
 Or install manually:
 
 [source,sh]
------------
 make
 cp cjson.so $your_lua_module_directory
------------
 
 
 RPM
@@ -93,10 +89,8 @@ the included RPM spec file. Install the +rpm-build+ package (or
 similar) then:
 
 [source,sh]
------------
 rpmbuild -tb lua-cjson-1.0devel.tar.gz
 rpm -Uvh $newly_built_lua_cjson_rpm
------------
 
 
 LuaRocks
@@ -108,10 +102,8 @@ modules on a wide range of platforms (including Windows).
 Extract the Lua CJSON source package into a directory and run:
 
 [source,sh]
------------
 cd lua-cjson-1.0devel
 luarocks make
------------
 
 [NOTE]
 LuaRocks does not support platform specific configuration for Solaris.
@@ -172,16 +164,15 @@ By default, _invalid_ numbers (NaN, Infinity, Hexidecimal) will be
 decoded. This default can be changed with
 +cjson.refuse_invalid_numbers+.
 
-.Example: decoding
+.Example: Decoding
 [source,lua]
-------------
-data_json = '[ true, { "foo": "bar" } ]'
-data_obj = cjson.decode(data_json)
-------------
+json_text = '[ true, { "foo": "bar" } ]'
+value = cjson.decode(json_text)
+-- Returns: { true, { foo = "bar" } }
 
 [CAUTION]
-Care must be taken when after decoding objects with numeric keys. Each
-numeric keys will be stored as a Lua +string+. Any code assuming type
+Care must be taken when after decoding JSON objects with numeric keys. Each
+numeric key will be stored as a Lua +string+. Any code assuming type
 +number+ may break.
 
 
@@ -230,20 +221,12 @@ as a JSON array or an object. A Lua table which only has positive
 integers (>0) keys of type +number+ will be encoded as a JSON array.
 All other tables will be encoded as a JSON object.
 
-Missing entries from sparse Lua arrays are encoded as +null+. For
-example:
+Missing entries from sparse Lua arrays are encoded as +null+.
 
-.Lua input
+.Example: Encoding a sparse array
 [source,lua]
-------------
-{ [3] = "data" }
-------------
-
-.JSON output
-[source,javascript]
--------------------
-[null,null,"data"]
--------------------
+cjson.encode({ [3] = "data" })
+-- Returns: '[null,null,"data"]'
 
 Lua CJSON does not use metamethods when serialising tables.
 
@@ -274,10 +257,9 @@ These defaults can be changed with:
 
 .Example: encoding
 [source,lua]
-------------
-data_obj = { true, { foo = "bar" } }
-data_json = cjson.encode(data_obj)
-------------
+value = { true, { foo = "bar" } }
+json_text = cjson.encode(value)
+-- Returns: '[true,{"foo":"bar"}]'
 
 
 cjson.encode_max_depth
@@ -295,9 +277,11 @@ tables.
 This check prevents a deeply nested or recursive data structure from
 crashing the application.
 
-.Example
+.Example: Recursive Lua tables
 [source,lua]
 a = {}; b = { a }; a[1] = b
+
+Once the maximum table depth has been reached Lua CJSON will throw an error.
 
 
 cjson.encode_number_precision
