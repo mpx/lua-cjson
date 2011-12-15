@@ -1,4 +1,3 @@
-CJSON_VERSION = 1.0.4
 LUA_VERSION =   5.1
 
 ## Available Lua CJSON specific workarounds
@@ -69,9 +68,3 @@ manual.html: manual.txt
 
 clean:
 	rm -f *.o *.so
-
-package:
-	git archive --prefix="lua-cjson-$(CJSON_VERSION)/" master | \
-		gzip -9 > "lua-cjson-$(CJSON_VERSION).tar.gz"
-	git archive --prefix="lua-cjson-$(CJSON_VERSION)/" \
-		-o "lua-cjson-$(CJSON_VERSION).zip" master

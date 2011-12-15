@@ -1,13 +1,14 @@
 #!/bin/sh
 
 PLATFORM="`uname -s`"
+[ "$1" ] && VERSION="$1" || VERSION="1.0devel"
 
 set -e
 
 # Portable "ggrep -A" replacement
 # contextgrep PATTERN POST_MATCH_LINES
 contextgrep() {
-	awk "/$1/ { count = ($2 + 1) } count { count--; print }"
+    awk "/$1/ { count = ($2 + 1) } count { count--; print }"
 }
 
 do_tests() {
@@ -33,11 +34,11 @@ echo "===== Verifying cjson.so is not installed ====="
 cd tests
 if lua -e 'require "cjson"' 2>/dev/null
 then
-	cat <<EOT
+    cat <<EOT
 Please ensure you do not have the Lua CJSON module installed before
 running these tests.
 EOT
-	exit
+    exit
 fi
 cd ..
 
@@ -66,13 +67,25 @@ rm -rf build tests/cjson.so
 
 if [ "$PLATFORM" = "Linux" ]
 then
-	echo "===== Testing RPM build ====="
-	make package
-	LOG=/tmp/build.$$
-	rpmbuild -tb lua-cjson-1.0.4.tar.gz | tee "$LOG"
-	RPM="`awk '/^Wrote: / && ! /debuginfo/ { print $2}' < "$LOG"`"
-	sudo -- rpm -Uvh \"$RPM\"
-	do_tests
-	sudo -- rpm -e lua-cjson
-	rm -f "$LOG"
+    echo "===== Testing RPM build ====="
+    SRCTGZ=""
+    TGZ=lua-cjson-$VERSION.tar.gz
+    for D in .. packages .
+    do
+        [ -r "$D/$TGZ" ] && SRCTGZ="$D/$TGZ"
+    done
+    if [ "$SRCTGZ" ]
+    then
+        LOG=/tmp/build.$$
+        rpmbuild -tb "$SRCTGZ" > "$LOG"
+        RPM="`awk '/^Wrote: / && ! /debuginfo/ { print $2}' < "$LOG"`"
+        sudo -- rpm -Uvh \"$RPM\"
+        do_tests
+        sudo -- rpm -e lua-cjson
+        rm -f "$LOG"
+    else
+        echo "==> skipping, $TGZ not found"
+    fi
 fi
+
+# vi:ai et sw=4 ts=4:

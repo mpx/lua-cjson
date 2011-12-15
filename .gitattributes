@@ -1,0 +1,2 @@
+.gitattributes export-ignore
+build-packages.sh export-ignore

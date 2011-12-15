@@ -45,7 +45,7 @@
 #include "strbuf.h"
 
 #ifndef CJSON_VERSION
-#define CJSON_VERSION   "1.0.4"
+#define CJSON_VERSION   "1.0devel"
 #endif
 
 /* Support to reset locale to POSIX for strtod() / sprintf().

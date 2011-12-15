@@ -2,7 +2,7 @@
 %define lualibdir %{_libdir}/lua/%{luaver}
 
 Name:		lua-cjson
-Version:	1.0.4
+Version:	1.0devel
 Release:	1%{?dist}
 Summary:	JSON support for the Lua language
 
@@ -39,7 +39,7 @@ rm -rf "$RPM_BUILD_ROOT"
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE NEWS performance.txt manual.txt rfc4627.txt tests THANKS TODO
+%doc LICENSE NEWS performance.txt manual.html manual.txt rfc4627.txt tests THANKS TODO
 %{lualibdir}/*
 
 

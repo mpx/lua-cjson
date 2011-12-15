@@ -1,7 +1,6 @@
-Lua CJSON Manual
-================
+= Lua CJSON 1.0devel Manual =
 Mark Pulford <mark@kyne.com.au>
-v1.0.4, November 30 2011
+:revdate: 30th November 2011
 
 Overview
 --------
@@ -96,7 +95,7 @@ similar) then:
 
 [source,sh]
 -----------
-rpmbuild -tb lua-cjson-1.0.4.tar.gz
+rpmbuild -tb lua-cjson-1.0devel.tar.gz
 rpm -Uvh $newly_built_lua_cjson_rpm
 -----------
 
@@ -111,7 +110,7 @@ Extract the Lua CJSON source package into a directory and run:
 
 [source,sh]
 -----------
-cd lua-cjson-1.0.4
+cd lua-cjson-1.0devel
 luarocks make
 -----------
 
