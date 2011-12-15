@@ -328,43 +328,39 @@ convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
 -- "safe" must be a positive integer (>0). Default: 10
 ------------
 
-A Lua array is sparse if it is missing a value for at least 1 index.
-Lua CJSON encodes missing values as JSON +null+. Eg, Lua array:
+Lua CJSON classifies Lua tables into 3 types when encoding as a JSON
+array. This is determined by the number of values missing for keys up
+to the maximum index:
 
-.Lua input
-[source,lua]  
-------------
-{ [3] = "sparse" }
-------------
+Normal::
+  All values are available.
+Sparse::
+  At least 1 value is missing.
+Excessively sparse::
+  The number of missing values exceed a configured number.
 
-.JSON output
-[source,javascript]
--------------------
-[null,null,"sparse"]
--------------------
+Lua CJSON encodes sparse Lua arrays by as JSON arrays using JSON +null+.
 
-Lua CJSON detects excessively sparse arrays by comparing the number of
-items in a Lua array with the maximum index. In particular:
+.Example: Encoding a sparse array
+[source,lua]
+cjson.encode({ [3] = "sparse" })
+-- Returns: '[null,null,"sparse"]'
 
------
-maximum index > safe AND maximum index > array_items * ratio
------
+Lua CJSON checks for excessively sparse arrays when the maximum index
+is greater an the +safe+ limit and +ratio+ is greater than +0+. An
+array is _excessively sparse_ when:
+
+_maximum_index_ > _item_count_ * +ratio+
 
 By default, attempting to encode excessively sparse arrays will
-generate an error.
+generate an error. If +convert+ is set to +true+, excessively sparse
+arrays will be converted to a JSON object:
 
-If _convert_ is set to +true+, excessively sparse arrays will be
-encoded as a JSON object:
-
-.Lua input
+.Example: Enabling conversion to a JSON object
 [source,lua]
-{ [1000] = "excessively sparse" }
-
-.JSON output
-[source,javascript]
-{"1000":"excessively sparse"}
-
-Setting +ratio+ to +0+ disables checking for excessively sparse arrays.
+cjson.encode_sparse_array(true)
+cjson.encode({ [1000] = "excessively sparse" })
+-- Returns: '{"1000":"excessively sparse"}'
 
 
 cjson.keep_encode_buffer
