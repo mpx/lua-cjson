@@ -155,8 +155,8 @@ keep = cjson.encode_keep_buffer([keep])
 ------------
 
 
-cjson.decode
-~~~~~~~~~~~~
+decode
+~~~~~~
 
 [source,lua]
 ------------
@@ -193,8 +193,8 @@ numeric key will be stored as a Lua +string+. Any code assuming type
 +number+ may break.
 
 
-cjson.encode
-~~~~~~~~~~~~
+encode
+~~~~~~
 
 [source,lua]
 ------------
@@ -289,8 +289,8 @@ json_text = cjson.encode(value)
 -- Returns: '[true,{"foo":"bar"}]'
 
 
-cjson.encode_keep_buffer
-~~~~~~~~~~~~~~~~~~~~~~~~
+encode_keep_buffer
+~~~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
@@ -306,8 +306,8 @@ option to +false+ will cause the buffer to be freed after each call to
 
 
 [[encode_max_depth]]
-cjson.encode_max_depth
-~~~~~~~~~~~~~~~~~~~~~~
+encode_max_depth
+~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
@@ -328,8 +328,8 @@ a = {}; b = { a }; a[1] = b
 Once the maximum table depth has been reached Lua CJSON will throw an error.
 
 
-cjson.encode_number_precision
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+encode_number_precision
+~~~~~~~~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
@@ -345,8 +345,8 @@ heavy JSON conversions by up to 50%.
 
 
 [[encode_sparse_array]]
-cjson.encode_sparse_array
-~~~~~~~~~~~~~~~~~~~~~~~~~
+encode_sparse_array
+~~~~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
@@ -390,8 +390,8 @@ cjson.encode({ [1000] = "excessively sparse" })
 
 
 [[refuse_invalid_numbers]]
-cjson.refuse_invalid_numbers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+refuse_invalid_numbers
+~~~~~~~~~~~~~~~~~~~~~~
 
 [source,lua]
 ------------
@@ -422,15 +422,15 @@ Disabled for decoding:: All numbers supported by +strtod+(3) will be parsed.
 API (Variables)
 ---------------
 
-cjson.null
-~~~~~~~~~~
+null
+~~~~
 
 Lua CJSON decodes JSON +null+ as a Lua +lightuserdata+ NULL pointer.
 +cjson.null+ is provided for comparison.
 
 
-cjson.version
-~~~~~~~~~~~~~
+version
+~~~~~~~
 
 The version number of the Lua CJSON module in use can be found in
 +cjson.version+.
