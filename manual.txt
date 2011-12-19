@@ -1,6 +1,6 @@
 = Lua CJSON 1.0devel Manual =
 Mark Pulford <mark@kyne.com.au>
-:revdate: 30th November 2011
+:revdate: November 30, 2011
 
 Overview
 --------
@@ -8,7 +8,7 @@ Overview
 Lua CJSON provides fast JSON parsing and encoding support for Lua.
 
 .Features
-- More than 10x to 20x faster than the efficient pure Lua JSON modules.
+- More than 10x to 20x faster than efficient pure Lua JSON modules.
 - Full support for JSON with UTF-8, including decoding surrogate
   pairs.
 - Optional run-time support for common exceptions to the JSON
@@ -48,10 +48,9 @@ Build options (#define)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric
-conversion as they are usually well supported, fast and bug free. To
-ensure JSON encoding/decoding works correctly under locales using
-comma decimal separators, Lua CJSON may optionally be compiled with
-one of the following preprocessor macros:
+conversion as they are usually well supported, fast and bug free. Lua
+CJSON may optionally be compiled with (only) one of the following
+preprocessor macros to support locales with comma decimal separators:
 
 [horizontal]
 USE_POSIX_USELOCALE:: Thread safe. Supported by Linux and Mac OSX.
@@ -222,9 +221,10 @@ The remaining Lua types will generate an error:
 - +userdata+
 
 By default, numbers are encoded using the standard Lua number
-+printf+(3) format ("%.14g").
++printf+(3) format (+%.14g+).
 
-Lua CJSON will escape the following characters within each string:
+Lua CJSON will escape the following characters within each UTF-8
+string:
 
 - Control characters (ASCII 0 - 31)
 - Double quote (ASCII 34)
@@ -232,8 +232,20 @@ Lua CJSON will escape the following characters within each string:
 - Blackslash (ASCII 92)
 - Delete (ASCII 127)
 
-All other characters are passed transparently. Any UTF-8 error
-checking must be done by the application.
+All other characters are passed transparently.
+
+[CAUTION]
+=========
+Lua CJSON will successfully encode/decode binary strings, but this is
+technically not supported by JSON and may not be compatible with other
+JSON libraries. Applications should ensure all Lua strings passed to
++cjson.encode+ are valid UTF-8 to ensure the output is valid JSON.
+
+Base64 is a common way to transport binary data through JSON. Lua
+Base64 routines can be found in the
+http://w3.impa.br/~diego/software/luasocket/[LuaSocket] and
+http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lbase64[lbase64] packages.
+=========
 
 Lua CJSON uses a heuristic to determine whether to encode a Lua table
 as a JSON array or an object. A Lua table with only positive integers
@@ -256,6 +268,7 @@ generate an error.
 Standards compliant JSON must be encapsulated in either an object
 (+{}+) or an array (+[]+). Hence a table must be passed to
 +cjson.encode+ to generate standards compliant JSON output.
+This may not be required by some applications.
 
 By default, the following Lua values will generate errors:
 
@@ -429,5 +442,6 @@ References
 
 - http://tools.ietf.org/html/rfc4627[RFC 4627]
 - http://www.json.org/[JSON website]
+
 
 // vi:tw=70:
