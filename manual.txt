@@ -304,6 +304,9 @@ not freed until the Lua CJSON module is garbage collected. Setting this
 option to +false+ will cause the buffer to be freed after each call to
 +cjson.encode+.
 
+This setting is only changed when an argument is provided. The current
+setting is always returned.
+
 
 [[encode_max_depth]]
 encode_max_depth
@@ -317,6 +320,9 @@ depth = cjson.encode_max_depth([depth])
 
 By default, Lua CJSON will reject data structure with more than 20 nested
 tables.
+
+This setting is only changed when an argument is provided. The current
+setting is always returned.
 
 This check prevents a deeply nested or recursive data structure from
 crashing the application.
@@ -340,6 +346,9 @@ precision = cjson.encode_number_precision([precision])
 By default, Lua CJSON will output 14 significant digits when
 converting a number to text.
 
+This setting is only changed when an argument is provided. The current
+setting is always returned.
+
 Reducing number precision to _3_ can improve performance of number
 heavy JSON conversions by up to 50%.
 
@@ -359,6 +368,9 @@ convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
 Lua CJSON classifies Lua tables into 3 types when encoding as a JSON
 array. This is determined by the number of values missing for keys up
 to the maximum index:
+
+Each particular setting is only changed when that argument is
+provided. The current settings are always returned.
 
 [horizontal]
 Normal:: All values are available.
@@ -409,6 +421,9 @@ specification (_invalid numbers_):
 
 By default Lua CJSON will decode _invalid numbers_, but will refuse to
 encode them.
+
+This setting is only changed when an argument is provided. The current
+setting is always returned.
 
 This setting can be configured separately for encoding and/or
 decoding:
