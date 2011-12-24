@@ -631,7 +631,7 @@ static void json_append_number(lua_State *l, strbuf_t *json, int index,
         /* Some platforms may print -nan, just hard code it */
         strbuf_append_mem(json, "nan", 3);
     } else {
-        /* Lowest double printed with %.14g is 21 characters long:
+        /* Longest double printed with %.14g is 21 characters long:
          * -1.7976931348623e+308
          *
          * Use 32 to include the \0, and a few extra just in case..
