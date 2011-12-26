@@ -1,25 +1,15 @@
 #!/bin/sh
 
-# build-packages.sh [ VERSION [ BRANCH ] ]
+# build-packages.sh [ REF ]
 
-# No args: Build current 1.0devel packages
-# 1 args: Build release package for VERSION (>= 1.0.5)
-# 2 args: Build release package for VERSION from BRANCH
+# Build packages. Use current checked out version, or a specific tag/commit.
 
 # Files requiring a version bump
 VERSION_FILES="lua-cjson-1.0devel-1.rockspec lua-cjson.spec lua_cjson.c manual.txt runtests.sh"
 
-if [ "$1" ]
-then
-    VERSION="$1"
-    BRANCH="cjson-$VERSION"
-    VER_BUMP=1
-else
-    VERSION=1.0devel
-    BRANCH=master
-fi
-
-[ "$2" ] && BRANCH="$2"
+[ "$1" ] && BRANCH="$1" || BRANCH="`git describe --match '1.[0-9]*'`"
+VERSION="`git describe --match '1.[0-9]*' $BRANCH`"
+VERSION="${VERSION//-/.}"
 
 PREFIX="lua-cjson-$VERSION"
 
@@ -34,11 +24,11 @@ trap "rm -rf '$BUILDROOT'" 0
 git archive --prefix="$PREFIX/" "$BRANCH" | tar xf - -C "$BUILDROOT"
 cd "$BUILDROOT"
 
-if [ "$VER_BUMP" ]; then
-    ( cd "$PREFIX"
-      rename 1.0devel "$VERSION" $VERSION_FILES
-      perl -pi -e "s/\\b1.0devel\\b/$VERSION/g" ${VERSION_FILES/1.0devel/$VERSION}; )
-fi
+cd "$PREFIX"
+rename 1.0devel "$VERSION" $VERSION_FILES
+perl -pi -e "s/\\b1.0devel\\b/$VERSION/g" ${VERSION_FILES/1.0devel/$VERSION};
+cd ..
+
 make -C "$PREFIX" doc
 tar cf - "$PREFIX" | gzip -9 > "$DESTDIR/$PREFIX.tar.gz"
 zip -9rq "$DESTDIR/$PREFIX.zip" "$PREFIX"
