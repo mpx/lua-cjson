@@ -247,7 +247,7 @@ end
 
 local pass, total = run_test_summary()
 
-print(string.format("==> Summary: %d/%d tests succeeded", pass, total))
+print(string.format("==> Summary: %d/%d tests failed", total - pass, total))
 
 if pass ~= total then
     os.exit(1)
