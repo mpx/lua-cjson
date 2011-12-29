@@ -24,28 +24,15 @@ build = {
     modules = {
         cjson = {
             sources = { "lua_cjson.c", "strbuf.c" },
--- Optional workarounds:
--- USE_POSIX_USELOCALE: Linux, OSX. Thread safe. Recommended.
--- USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
---                      thread-safety isn't required.
+-- Optional workaround:
 -- USE_INTERNAL_ISINF:  Provide internal isinf() implementation. Required
 --                      on some Solaris platforms.
             defines = {
-                "USE_POSIX_SETLOCALE",
 -- LuaRocks does not support platform specific configuration for Solaris.
 -- Uncomment the line below on Solaris platforms.
 --                "USE_INTERNAL_ISINF"
             }
         }
-    },
-    -- Override default build options (per platform)
-    platforms = {
-        linux = { modules = { cjson = { defines = {
-            [1] = "USE_POSIX_USELOCALE"
-        } } } },
-        macosx = { modules = { cjson = { defines = {
-            [1] = "USE_POSIX_USELOCALE"
-        } } } }
     },
     copy_directories = { "tests" }
 }

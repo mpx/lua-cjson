@@ -47,20 +47,6 @@ LuaRocks:: Unix, Windows
 Build options (#define)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Lua CJSON uses +strtod+(3) and +snprintf+(3) to perform numeric
-conversion as they are usually well supported, fast and bug free. Lua
-CJSON may optionally be compiled with (only) one of the following
-preprocessor macros to support locales with comma decimal separators:
-
-[horizontal]
-USE_POSIX_USELOCALE:: Thread safe. Supported by Linux and Mac OSX.
-Recommended where available.
-
-USE_POSIX_SETLOCALE:: Use only with single threaded programs.
-Works on all ANSI C platforms.
-
-Also available:
-
 [horizontal]
 USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing isinf().
 

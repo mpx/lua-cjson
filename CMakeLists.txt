@@ -11,16 +11,6 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(Lua51 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
-# Use thread-safe POSIX.1-2008 uselocale() where available, otherwise
-# fall back to ANSI C setlocale().
-include(CheckFunctionExists)
-CHECK_FUNCTION_EXISTS(uselocale HAVE_USELOCALE)
-if(HAVE_USELOCALE)
-    add_definitions(-DUSE_POSIX_USELOCALE)
-else()
-    add_definitions(-DUSE_POSIX_SETLOCALE)
-endif()
-
 # Handle platforms missing isinf() macro (Eg, some Solaris systems).
 include(CheckSymbolExists)
 CHECK_SYMBOL_EXISTS(isinf math.h HAVE_ISINF)

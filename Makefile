@@ -1,13 +1,6 @@
 LUA_VERSION =   5.1
 
-## Available Lua CJSON specific workarounds
-#
-# To ensure JSON encoding/decoding works correctly for locales using
-# comma decimal separators, Lua CJSON must be compiled with one of
-# these options:
-# USE_POSIX_USELOCALE: Linux, OSX. Thread safe. Recommended option.
-# USE_POSIX_SETLOCALE: Works on all ANSI C platforms. May be used when
-#                      thread-safety isn't required.
+## Available defines for CJSON_CFLAGS
 #
 # USE_INTERNAL_ISINF: Workaround for Solaris platforms missing isinf().
 
@@ -15,7 +8,6 @@ LUA_VERSION =   5.1
 PREFIX =            /usr/local
 #CFLAGS =            -g -Wall -pedantic -fno-inline
 CFLAGS =            -O3 -Wall -pedantic
-CJSON_CFLAGS =      -DUSE_POSIX_SETLOCALE
 CJSON_LDFLAGS =     -shared
 LUA_INCLUDE_DIR =   $(PREFIX)/include
 LUA_MODULE_DIR =    $(PREFIX)/lib/lua/$(LUA_VERSION)
@@ -29,18 +21,16 @@ INSTALL_CMD =       install
 # specific details.
 
 ## Linux
-#CJSON_CFLAGS =      -DUSE_POSIX_USELOCALE
 
 ## FreeBSD
 #LUA_INCLUDE_DIR =   $(PREFIX)/include/lua51
 
 ## MacOSX (Macports)
 #PREFIX =            /opt/local
-#CJSON_CFLAGS =      -DUSE_POSIX_USELOCALE
 #CJSON_LDFLAGS =     -bundle -undefined dynamic_lookup
 
 ## Solaris
-#CJSON_CFLAGS =      -DUSE_POSIX_SETLOCALE -DUSE_INTERNAL_ISINF
+#CJSON_CFLAGS =      -DUSE_INTERNAL_ISINF
 
 ## End platform specific section
 
