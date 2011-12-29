@@ -11,6 +11,12 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(Lua51 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
+include(TestBigEndian)
+TEST_BIG_ENDIAN(BIG_ENDIAN)
+if(HAVE_BIG_ENDIAN)
+    add_definitions(-DIEEE_BIG_ENDIAN)
+endif()
+
 # Handle platforms missing isinf() macro (Eg, some Solaris systems).
 include(CheckSymbolExists)
 CHECK_SYMBOL_EXISTS(isinf math.h HAVE_ISINF)

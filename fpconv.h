@@ -6,7 +6,15 @@
  * -1.7976931348623e+308 */
 # define FPCONV_G_FMT_BUFSIZE   32
 
-extern void fpconv_init();
+#ifdef USE_INTERNAL_DTOA
+static inline void fpconv_init()
+{
+    /* Do nothing - not required */
+}
+#else
+extern inline void fpconv_init();
+#endif
+
 extern int fpconv_g_fmt(char*, double, int);
 extern double fpconv_strtod(const char*, char**);
 

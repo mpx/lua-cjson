@@ -4,6 +4,10 @@
 ## DISABLE_CJSON_GLOBAL:    Do not store module is "cjson" global.
 ## DISABLE_INVALID_NUMBERS: Permanently disable invalid JSON numbers:
 ##                          NaN, Infinity, hex.
+##
+## Optional built-in number conversion uses the following defines:
+## USE_INTERNAL_DTOA:       Use builtin strtod/dtoa for numeric conversions.
+## IEEE_BIG_ENDIAN:         Required on big endian architectures.
 
 ##### Build defaults #####
 LUA_VERSION =       5.1
@@ -42,10 +46,25 @@ INSTALL_CMD =       install
 #CJSON_CFLAGS =      -DDISABLE_INVALID_NUMBERS
 #CJSON_LDFLAGS =     -shared -L$(PREFIX)/lib -llua51
 
+##### Use built in number conversion (optional) #####
+
+## Enable built in number conversion
+#FPCONV_OBJS =       g_fmt.o dtoa.o
+#CJSON_CFLAGS +=     -DUSE_INTERNAL_DTOA
+
+## Compile built in number conversion for big endian architectures
+#CJSON_CFLAGS +=     -DIEEE_BIG_ENDIAN
+
+## Compile built in number conversion to support multi-threaded
+## applications (recommended)
+#CJSON_CFLAGS +=     -pthread -DMULTIPLE_THREADS
+#CJSON_LDFLAGS +=    -pthread
+
 ##### End customisable sections #####
 
 BUILD_CFLAGS =      -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
-OBJS :=             lua_cjson.o strbuf.o fpconv.o
+FPCONV_OBJS ?=      fpconv.o
+OBJS :=             lua_cjson.o strbuf.o $(FPCONV_OBJS)
 
 .PHONY: all clean install package doc
 
