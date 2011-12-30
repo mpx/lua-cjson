@@ -247,9 +247,10 @@ end
 
 local pass, total = run_test_summary()
 
-print(string.format("==> Summary: %d/%d tests failed", total - pass, total))
-
-if pass ~= total then
+if pass == total then
+    print("==> Summary: all tests succeeded")
+else
+    print(string.format("==> Summary: %d/%d tests failed", total - pass, total))
     os.exit(1)
 end
 
