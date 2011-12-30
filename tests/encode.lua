@@ -7,7 +7,7 @@
 -- ./encode.lua lua_data.lua
 
 require "common"
-require "cjson"
+local json = require "cjson"
 
 function get_lua_table(file)
 	local func = loadstring("data = " .. file_load(file))
@@ -23,6 +23,6 @@ function get_lua_table(file)
 end
 
 local t = get_lua_table(arg[1])
-print(cjson.encode(t))
+print(json.encode(t))
 
 -- vi:ai et sw=4 ts=4:

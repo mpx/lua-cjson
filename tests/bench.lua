@@ -72,7 +72,7 @@ function bench_file(filename)
     return benchmark(tests, 0.1, 5)
 end
 
-cjson.encode_keep_buffer(true)
+json.encode_keep_buffer(true)
 
 for i = 1, #arg do
     local results = bench_file(arg[i])

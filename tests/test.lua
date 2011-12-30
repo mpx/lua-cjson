@@ -112,8 +112,8 @@ local decode_numeric_tests = {
 
 local encode_table_tests = {
     function()
-        cjson.encode_sparse_array(true, 2, 3)
-        cjson.encode_max_depth(5)
+        json.encode_sparse_array(true, 2, 3)
+        json.encode_max_depth(5)
         return "Setting sparse array (true, 2, 3) / max depth (5)"
     end,
     { json.encode, { { [3] = "sparse test" } },
@@ -211,19 +211,19 @@ local escape_tests = {
 local locale_tests = {
     function ()
         os.setlocale("cs_CZ")
-        cjson.update_locale()
+        json.update_locale()
         return "Setting locale to cs_CZ (comma separator)"
     end,
     { json.encode, { 1.5 }, true, { '1.5' } },
     { json.decode, { "[ 10, \"test\" ]" }, true, { { 10, "test" } } },
     function ()
         os.setlocale("C")
-        cjson.update_locale()
+        json.update_locale()
         return "Reverting locale to POSIX"
     end
 }
 
-print(string.format("Testing Lua CJSON version %s\n", cjson.version))
+print(string.format("Testing Lua CJSON version %s\n", json.version))
 
 run_test_group("decode simple value", decode_simple_tests)
 run_test_group("encode simple value", encode_simple_tests)
@@ -232,7 +232,7 @@ run_test_group("decode numeric", decode_numeric_tests)
 -- INCLUDE:
 -- - Sparse array exception..
 -- - ..
--- cjson.encode_sparse_array(true, 2, 3)
+-- json.encode_sparse_array(true, 2, 3)
 
 run_test_group("encode table", encode_table_tests)
 run_test_group("decode error", decode_error_tests)
@@ -240,8 +240,8 @@ run_test_group("encode error", encode_error_tests)
 run_test_group("escape", escape_tests)
 run_test_group("locale", locale_tests)
 
-cjson.refuse_invalid_numbers(false)
-cjson.encode_max_depth(20)
+json.refuse_invalid_numbers(false)
+json.encode_max_depth(20)
 for i = 1, #arg do
     run_test("decode cycle " .. arg[i], test_decode_cycle, { arg[i] },
              true, { true })

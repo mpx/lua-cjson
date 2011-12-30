@@ -2,7 +2,8 @@ LUA_VERSION =   5.1
 
 ## Available defines for CJSON_CFLAGS
 #
-# USE_INTERNAL_ISINF: Workaround for Solaris platforms missing isinf().
+# USE_INTERNAL_ISINF:   Workaround for Solaris platforms missing isinf().
+# DISABLE_CJSON_GLOBAL: Do not store module is "cjson" global
 
 ## Build defaults
 PREFIX =            /usr/local

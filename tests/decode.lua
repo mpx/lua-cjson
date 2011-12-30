@@ -7,8 +7,8 @@
 -- ./decode.lua test.json
 
 require "common"
-require "cjson"
+local json = require "cjson"
 
 local json_text = file_load(arg[1])
-local t = cjson.decode(json_text)
+local t = json.decode(json_text)
 print(serialise_value(t))

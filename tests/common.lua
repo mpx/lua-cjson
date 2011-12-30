@@ -1,4 +1,4 @@
-require "cjson"
+local json = require "cjson"
 
 -- Misc routines to assist with CJSON testing
 --
@@ -77,8 +77,8 @@ function serialise_value(value, indent, depth)
     if indent == nil then indent = "" end
     if depth == nil then depth = 0 end
 
-    if value == cjson.null then
-        return "cjson.null"
+    if value == json.null then
+        return "json.null"
     elseif type(value) == "string" then
         return string.format("%q", value)
     elseif type(value) == "nil" or type(value) == "number" or

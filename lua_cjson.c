@@ -45,6 +45,10 @@
 #include "strbuf.h"
 #include "fpconv.h"
 
+#ifndef CJSON_MODNAME
+#define CJSON_MODNAME   "cjson"
+#endif
+
 #ifndef CJSON_VERSION
 #define CJSON_VERSION   "1.0devel"
 #endif
@@ -175,21 +179,15 @@ static const char *char2escape[256] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 };
 
-static int json_config_key;
-
 /* ===== CONFIGURATION ===== */
 
 static json_config_t *json_fetch_config(lua_State *l)
 {
     json_config_t *cfg;
 
-    lua_pushlightuserdata(l, &json_config_key);
-    lua_gettable(l, LUA_REGISTRYINDEX);
-    cfg = lua_touserdata(l, -1);
+    cfg = lua_touserdata(l, lua_upvalueindex(1));
     if (!cfg)
         luaL_error(l, "BUG: Unable to fetch CJSON configuration");
-
-    lua_pop(l, 1);
 
     return cfg;
 }
@@ -1246,7 +1244,27 @@ static int json_decode(lua_State *l)
 
 /* ===== INITIALISATION ===== */
 
-int luaopen_cjson(lua_State *l)
+#if !defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502
+/* Compatibility for Lua 5.1.
+ *
+ * luaL_setfuncs() is used to create a module table where the functions have
+ * json_config_t as their first upvalue. Code borrowed from Lua 5.2 source. */
+static void luaL_setfuncs (lua_State *l, const luaL_Reg *reg, int nup)
+{
+    int i;
+
+    luaL_checkstack(l, nup, "too many upvalues");
+    for (; reg->name != NULL; reg++) {  /* fill the table with given functions */
+        for (i = 0; i < nup; i++)  /* copy upvalues to the top */
+            lua_pushvalue(l, -nup);
+        lua_pushcclosure(l, reg->func, nup);  /* closure with those upvalues */
+        lua_setfield(l, -(nup + 2), reg->name);
+    }
+    lua_pop(l, nup);  /* remove upvalues */
+}
+#endif
+
+static int lua_cjson_new(lua_State *l)
 {
     luaL_Reg reg[] = {
         { "encode", json_encode },
@@ -1257,27 +1275,50 @@ int luaopen_cjson(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
         { "update_locale", json_update_locale },
+        { "new", lua_cjson_new },
         { NULL, NULL }
     };
 
-    /* Update the current locale for g_fmt/strtod */
+    /* Update the current locale for g_fmt/strtod.
+     * Using different locales per-thread is not supported. */
     fpconv_update_locale();
 
-    /* Use json_config_key as a pointer.
-     * It's faster than using a config string, and more unique */
-    lua_pushlightuserdata(l, &json_config_key);
-    json_create_config(l);
-    lua_settable(l, LUA_REGISTRYINDEX);
+    /* cjson module table */
+    lua_newtable(l);
 
-    luaL_register(l, "cjson", reg);
+    /* Register functions with config data as upvalue */
+    json_create_config(l);
+    luaL_setfuncs(l, reg, 1);
 
     /* Set cjson.null */
     lua_pushlightuserdata(l, NULL);
     lua_setfield(l, -2, "null");
 
-    /* Set cjson.version */
+    /* Set module name / version fields */
+    lua_pushliteral(l, CJSON_MODNAME);
+    lua_setfield(l, -2, "_NAME");
+    lua_pushliteral(l, CJSON_VERSION);
+    lua_setfield(l, -2, "_VERSION");
     lua_pushliteral(l, CJSON_VERSION);
     lua_setfield(l, -2, "version");
+
+    return 1;
+}
+
+int luaopen_cjson(lua_State *l)
+{
+    lua_cjson_new(l);
+
+#if !defined(DISABLE_CJSON_GLOBAL) && (!defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502)
+    /* Register a global "cjson" table to maintain compatibility with earlier
+     * versions of Lua CJSON which used luaL_register() under Lua 5.1.
+     *
+     * From Lua 5.2 onwards, Lua CJSON does not automatically register a global
+     * table.
+     */
+    lua_pushvalue(l, -1);
+    lua_setglobal(l, CJSON_MODNAME);
+#endif
 
     /* Return cjson table */
     return 1;
