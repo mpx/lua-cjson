@@ -29,7 +29,7 @@
 
 #include "strbuf.h"
 
-void die(const char *fmt, ...)
+static void die(const char *fmt, ...)
 {
     va_list arg;
 
