@@ -23,11 +23,11 @@ build = {
     type = "builtin",
     modules = {
         cjson = {
-            sources = { "lua_cjson.c", "strbuf.c" },
+            sources = { "lua_cjson.c", "strbuf.c", "fpconv.c" },
+            defines = {
 -- Optional workaround:
 -- USE_INTERNAL_ISINF:  Provide internal isinf() implementation. Required
 --                      on some Solaris platforms.
-            defines = {
 -- LuaRocks does not support platform specific configuration for Solaris.
 -- Uncomment the line below on Solaris platforms.
 --                "USE_INTERNAL_ISINF"

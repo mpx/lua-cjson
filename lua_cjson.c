@@ -43,6 +43,7 @@
 #include <lauxlib.h>
 
 #include "strbuf.h"
+#include "fpconv.h"
 
 #ifndef CJSON_VERSION
 #define CJSON_VERSION   "1.0devel"
@@ -60,6 +61,7 @@
 #define DEFAULT_ENCODE_REFUSE_BADNUM 1
 #define DEFAULT_DECODE_REFUSE_BADNUM 0
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
+#define DEFAULT_ENCODE_NUMBER_PRECISION 14
 
 typedef enum {
     T_OBJ_BEGIN,
@@ -104,7 +106,6 @@ typedef struct {
     char *char2escape[256]; /* Encoding */
 #endif
     strbuf_t encode_buf;
-    char number_fmt[8];     /* "%.XXg\0" */
     int current_depth;
 
     int encode_sparse_convert;
@@ -253,12 +254,6 @@ static int json_cfg_encode_max_depth(lua_State *l)
     return 1;
 }
 
-static void json_set_number_precision(json_config_t *cfg, int prec)
-{
-    cfg->encode_number_precision = prec;
-    sprintf(cfg->number_fmt, "%%.%dg", prec);
-}
-
 /* Configures number precision when converting doubles to text */
 static int json_cfg_encode_number_precision(lua_State *l)
 {
@@ -272,7 +267,7 @@ static int json_cfg_encode_number_precision(lua_State *l)
         precision = luaL_checkinteger(l, 1);
         luaL_argcheck(l, 1 <= precision && precision <= 14, 1,
                       "expected integer between 1 and 14");
-        json_set_number_precision(cfg, precision);
+        cfg->encode_number_precision = precision;
     }
 
     lua_pushinteger(l, cfg->encode_number_precision);
@@ -342,6 +337,13 @@ static int json_cfg_refuse_invalid_numbers(lua_State *l)
     return 1;
 }
 
+static int json_update_locale(lua_State *l)
+{
+    fpconv_update_locale();
+
+    return 0;
+}
+
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
@@ -376,7 +378,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_refuse_badnum = DEFAULT_ENCODE_REFUSE_BADNUM;
     cfg->decode_refuse_badnum = DEFAULT_DECODE_REFUSE_BADNUM;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
-    json_set_number_precision(cfg, 14);
+    cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
 
     /* Decoding init */
 
@@ -562,6 +564,7 @@ static void json_append_number(lua_State *l, strbuf_t *json, int index,
                                json_config_t *cfg)
 {
     double num = lua_tonumber(l, index);
+    int len;
 
     if (cfg->encode_refuse_badnum && (isinf(num) || isnan(num)))
         json_encode_exception(l, cfg, index, "must not be NaN or Inf");
@@ -571,11 +574,10 @@ static void json_append_number(lua_State *l, strbuf_t *json, int index,
         strbuf_append_mem(json, "nan", 3);
     } else {
         /* Longest double printed with %.14g is 21 characters long:
-         * -1.7976931348623e+308
-         *
-         * Use 32 to include the \0, and a few extra just in case..
-         */
-        strbuf_append_fmt(json, 32, cfg->number_fmt, num);
+         * -1.7976931348623e+308 */
+        strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE);
+        len = fpconv_g_fmt(strbuf_empty_ptr(json), num, cfg->encode_number_precision);
+        strbuf_extend_length(json, len);
     }
 }
 
@@ -963,7 +965,7 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
 
     token->type = T_NUMBER;
     startptr = &json->data[json->index];
-    token->value.number = strtod(&json->data[json->index], &endptr);
+    token->value.number = fpconv_strtod(&json->data[json->index], &endptr);
     if (startptr == endptr)
         json_set_token_error(token, json, "invalid number");
     else
@@ -1254,8 +1256,12 @@ int luaopen_cjson(lua_State *l)
         { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
+        { "update_locale", json_update_locale },
         { NULL, NULL }
     };
+
+    /* Update the current locale for g_fmt/strtod */
+    fpconv_update_locale();
 
     /* Use json_config_key as a pointer.
      * It's faster than using a config string, and more unique */

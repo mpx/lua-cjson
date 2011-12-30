@@ -35,7 +35,7 @@ INSTALL_CMD =       install
 ## End platform specific section
 
 BUILD_CFLAGS =      -fpic -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
-OBJS :=             lua_cjson.o strbuf.o
+OBJS :=             lua_cjson.o strbuf.o fpconv.o
 
 .PHONY: all clean install package doc
 

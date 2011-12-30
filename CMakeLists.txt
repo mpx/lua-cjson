@@ -30,7 +30,7 @@ else()
     set(_lua_module_dir "${_lua_lib_dir}/lua/5.1")
 endif()
 
-add_library(cjson MODULE lua_cjson.c strbuf.c)
+add_library(cjson MODULE lua_cjson.c strbuf.c fpconv.c)
 set_target_properties(cjson PROPERTIES PREFIX "")
 install(TARGETS cjson DESTINATION "${_lua_module_dir}")
 
