@@ -1,6 +1,10 @@
 Version 1.0.5 (?)
-* Updated Makefile for compatibility with non-GNU make implementations
+* Added support for Lua 5.2
 * Added HTML reference manual
+* Added CMake build support
+* Updated Makefile for compatibility with non-GNU make implementations
+* Improved compatibility for strtod/sprintf locale workaround
+* Encoding now supports pre-emptive threads within a single Lua state
 
 Version 1.0.4 (Nov 30 2011)
 * Fixed numeric conversion under locales with a comma decimal separator
