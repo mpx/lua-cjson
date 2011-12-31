@@ -110,7 +110,6 @@ typedef struct {
     char *char2escape[256]; /* Encoding */
 #endif
     strbuf_t encode_buf;
-    int current_depth;
 
     int encode_sparse_convert;
     int encode_sparse_ratio;
@@ -514,30 +513,27 @@ static int lua_array_length(lua_State *l, json_config_t *cfg)
     return max;
 }
 
-static void json_encode_descend(lua_State *l, json_config_t *cfg)
+static void json_check_encode_depth(lua_State *l, json_config_t *cfg, int current_depth)
 {
-    cfg->current_depth++;
-
-    if (cfg->current_depth > cfg->encode_max_depth) {
+    if (current_depth > cfg->encode_max_depth) {
         if (!cfg->encode_keep_buffer)
             strbuf_free(&cfg->encode_buf);
         luaL_error(l, "Cannot serialise, excessive nesting (%d)",
-                   cfg->current_depth);
+                   current_depth);
     }
 }
 
-static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json);
+static void json_append_data(lua_State *l, json_config_t *cfg,
+                             int current_depth, strbuf_t *json);
 
 /* json_append_array args:
  * - lua_State
  * - JSON strbuf
  * - Size of passwd Lua array (top of stack) */
-static void json_append_array(lua_State *l, json_config_t *cfg, strbuf_t *json,
-                              int array_length)
+static void json_append_array(lua_State *l, json_config_t *cfg, int current_depth,
+                              strbuf_t *json, int array_length)
 {
     int comma, i;
-
-    json_encode_descend(l, cfg);
 
     strbuf_append_char(json, '[');
 
@@ -549,13 +545,11 @@ static void json_append_array(lua_State *l, json_config_t *cfg, strbuf_t *json,
             comma = 1;
 
         lua_rawgeti(l, -1, i);
-        json_append_data(l, cfg, json);
+        json_append_data(l, cfg, current_depth, json);
         lua_pop(l, 1);
     }
 
     strbuf_append_char(json, ']');
-
-    cfg->current_depth--;
 }
 
 static void json_append_number(lua_State *l, strbuf_t *json, int index,
@@ -580,11 +574,9 @@ static void json_append_number(lua_State *l, strbuf_t *json, int index,
 }
 
 static void json_append_object(lua_State *l, json_config_t *cfg,
-                               strbuf_t *json)
+                               int current_depth, strbuf_t *json)
 {
     int comma, keytype;
-
-    json_encode_descend(l, cfg);
 
     /* Object */
     strbuf_append_char(json, '{');
@@ -614,18 +606,17 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         }
 
         /* table, key, value */
-        json_append_data(l, cfg, json);
+        json_append_data(l, cfg, current_depth, json);
         lua_pop(l, 1);
         /* table, key */
     }
 
     strbuf_append_char(json, '}');
-
-    cfg->current_depth--;
 }
 
 /* Serialise Lua data into JSON string. */
-static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
+static void json_append_data(lua_State *l, json_config_t *cfg,
+                             int current_depth, strbuf_t *json)
 {
     int len;
 
@@ -644,10 +635,12 @@ static void json_append_data(lua_State *l, json_config_t *cfg, strbuf_t *json)
         break;
     case LUA_TTABLE:
         len = lua_array_length(l, cfg);
+        current_depth++;
+        json_check_encode_depth(l, cfg, current_depth);
         if (len > 0)
-            json_append_array(l, cfg, json, len);
+            json_append_array(l, cfg, current_depth, json, len);
         else
-            json_append_object(l, cfg, json);
+            json_append_object(l, cfg, current_depth, json);
         break;
     case LUA_TNIL:
         strbuf_append_mem(json, "null", 4);
@@ -676,7 +669,6 @@ static int json_encode(lua_State *l)
     luaL_argcheck(l, lua_gettop(l) == 1, 1, "expected 1 argument");
 
     cfg = json_fetch_config(l);
-    cfg->current_depth = 0;
 
     /* Reset the persistent buffer if it exists.
      * Otherwise allocate a new buffer. */
@@ -685,7 +677,7 @@ static int json_encode(lua_State *l)
     else
         strbuf_init(&cfg->encode_buf, 0);
 
-    json_append_data(l, cfg, &cfg->encode_buf);
+    json_append_data(l, cfg, 0, &cfg->encode_buf);
     json = strbuf_string(&cfg->encode_buf, &len);
 
     lua_pushlstring(l, json, len);
