@@ -519,7 +519,7 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
 }
 
 static void json_check_encode_depth(lua_State *l, json_config_t *cfg,
-                                    strbuf_t *json, int current_depth)
+                                    int current_depth, strbuf_t *json)
 {
     if (current_depth > cfg->encode_max_depth) {
         if (!cfg->encode_keep_buffer)
@@ -558,14 +558,14 @@ static void json_append_array(lua_State *l, json_config_t *cfg, int current_dept
     strbuf_append_char(json, ']');
 }
 
-static void json_append_number(lua_State *l, strbuf_t *json, int index,
-                               json_config_t *cfg)
+static void json_append_number(lua_State *l, json_config_t *cfg,
+                               strbuf_t *json, int lindex)
 {
-    double num = lua_tonumber(l, index);
+    double num = lua_tonumber(l, lindex);
     int len;
 
     if (cfg->encode_refuse_badnum && (isinf(num) || isnan(num)))
-        json_encode_exception(l, cfg, json, index, "must not be NaN or Inf");
+        json_encode_exception(l, cfg, json, lindex, "must not be NaN or Inf");
 
     if (isnan(num)) {
         /* Some platforms may print -nan, just hard code it */
@@ -600,7 +600,7 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         keytype = lua_type(l, -2);
         if (keytype == LUA_TNUMBER) {
             strbuf_append_char(json, '"');
-            json_append_number(l, json, -2, cfg);
+            json_append_number(l, cfg, json, -2);
             strbuf_append_mem(json, "\":", 2);
         } else if (keytype == LUA_TSTRING) {
             json_append_string(l, json, -2);
@@ -631,7 +631,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         json_append_string(l, json, -1);
         break;
     case LUA_TNUMBER:
-        json_append_number(l, json, -1, cfg);
+        json_append_number(l, cfg, json, -1);
         break;
     case LUA_TBOOLEAN:
         if (lua_toboolean(l, -1))
@@ -642,7 +642,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     case LUA_TTABLE:
         len = lua_array_length(l, cfg, json);
         current_depth++;
-        json_check_encode_depth(l, cfg, json, current_depth);
+        json_check_encode_depth(l, cfg, current_depth, json);
         if (len > 0)
             json_append_array(l, cfg, current_depth, json, len);
         else
@@ -862,8 +862,11 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
     json->index++;
 
     /* json->tmp is the temporary strbuf used to accumulate the
-     * decoded string value. */
+     * decoded string value.
+     * json->tmp is sized to handle JSON containing only a string value.
+     */
     strbuf_reset(json->tmp);
+
     while ((ch = json->data[json->index]) != '"') {
         if (!ch) {
             /* Premature end of the string */
@@ -946,7 +949,6 @@ static int json_is_invalid_number(json_parse_t *json)
     } else if (json->data[i] <= '9') {
         return 0;                           /* Ordinary number */
     }
-
 
     /* Reject inf/nan */
     if (!strncasecmp(&json->data[i], "inf", 3))
