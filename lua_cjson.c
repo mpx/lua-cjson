@@ -344,13 +344,6 @@ static int json_cfg_refuse_invalid_numbers(lua_State *l)
     return 1;
 }
 
-static int json_update_locale(lua_State *l)
-{
-    fpconv_update_locale();
-
-    return 0;
-}
-
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
@@ -1284,7 +1277,6 @@ static int lua_cjson_new(lua_State *l)
         { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
-        { "update_locale", json_update_locale },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };

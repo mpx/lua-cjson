@@ -211,14 +211,14 @@ local escape_tests = {
 local locale_tests = {
     function ()
         os.setlocale("cs_CZ")
-        json.update_locale()
+        json.new()
         return "Setting locale to cs_CZ (comma separator)"
     end,
     { json.encode, { 1.5 }, true, { '1.5' } },
     { json.decode, { "[ 10, \"test\" ]" }, true, { { 10, "test" } } },
     function ()
         os.setlocale("C")
-        json.update_locale()
+        json.new()
         return "Reverting locale to POSIX"
     end
 }
