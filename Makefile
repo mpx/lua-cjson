@@ -8,7 +8,7 @@ LUA_VERSION =   5.1
 ## Build defaults
 PREFIX =            /usr/local
 #CFLAGS =            -g -Wall -pedantic -fno-inline
-CFLAGS =            -O3 -Wall -pedantic
+CFLAGS =            -O3 -Wall -pedantic -DNDEBUG
 CJSON_LDFLAGS =     -shared
 LUA_INCLUDE_DIR =   $(PREFIX)/include
 LUA_MODULE_DIR =    $(PREFIX)/lib/lua/$(LUA_VERSION)
