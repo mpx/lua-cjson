@@ -92,7 +92,6 @@ local encode_simple_tests = {
     { json.encode, { "hello" }, true, { '"hello"' } },
 }
 
-
 local decode_numeric_tests = {
     { json.decode, { '[ 0.0, -1, 0.3e-3, 1023.2 ]' },
       true, { { 0.0, -1, 0.0003, 1023.2 } } },
@@ -228,12 +227,6 @@ print(string.format("Testing Lua CJSON version %s\n", json.version))
 run_test_group("decode simple value", decode_simple_tests)
 run_test_group("encode simple value", encode_simple_tests)
 run_test_group("decode numeric", decode_numeric_tests)
-
--- INCLUDE:
--- - Sparse array exception..
--- - ..
--- json.encode_sparse_array(true, 2, 3)
-
 run_test_group("encode table", encode_table_tests)
 run_test_group("decode error", decode_error_tests)
 run_test_group("encode error", encode_error_tests)
