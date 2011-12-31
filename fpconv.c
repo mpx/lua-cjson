@@ -122,7 +122,7 @@ static void set_number_format(char *fmt, int precision)
     }
     fmt[i++] = '0' + d2;
     fmt[i++] = 'g';
-    fmt[i++] = 0;
+    fmt[i] = 0;
 }
 
 /* Assumes there is always at least 32 characters available in the target buffer */
