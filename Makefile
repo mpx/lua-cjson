@@ -6,9 +6,11 @@ LUA_VERSION =   5.1
 # DISABLE_CJSON_GLOBAL: Do not store module is "cjson" global
 
 ## Build defaults
+TARGET =            cjson.so
 PREFIX =            /usr/local
 #CFLAGS =            -g -Wall -pedantic -fno-inline
 CFLAGS =            -O3 -Wall -pedantic -DNDEBUG
+CJSON_CFLAGS =      -fpic
 CJSON_LDFLAGS =     -shared
 LUA_INCLUDE_DIR =   $(PREFIX)/include
 LUA_MODULE_DIR =    $(PREFIX)/lib/lua/$(LUA_VERSION)
@@ -33,21 +35,27 @@ INSTALL_CMD =       install
 ## Solaris
 #CJSON_CFLAGS =      -DUSE_INTERNAL_ISINF
 
+## Windows (MinGW)
+#TARGET =            cjson.dll
+#PREFIX =            /home/user/opt
+#CJSON_CFLAGS =
+#CJSON_LDFLAGS =     -shared -L$(PREFIX)/lib -llua51
+
 ## End platform specific section
 
-BUILD_CFLAGS =      -fpic -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
+BUILD_CFLAGS =      -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
 OBJS :=             lua_cjson.o strbuf.o fpconv.o
 
 .PHONY: all clean install package doc
 
-all: cjson.so
+all: $(TARGET)
 
 doc: manual.html
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(BUILD_CFLAGS) -o $@ $<
 
-cjson.so: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $(CJSON_LDFLAGS) -o $@ $(OBJS)
 
 install: cjson.so
@@ -58,4 +66,4 @@ manual.html: manual.txt
 	asciidoc -n -a toc manual.txt
 
 clean:
-	rm -f *.o *.so
+	rm -f *.o $(TARGET)
