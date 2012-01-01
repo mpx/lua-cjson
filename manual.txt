@@ -42,15 +42,6 @@ RPM:: Linux
 LuaRocks:: Unix, Windows
 
 
-Build Options (#define)
-~~~~~~~~~~~~~~~~~~~~~~~
-
-[horizontal]
-USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing isinf().
-DISABLE_CJSON_GLOBAL:: Do not store module table in global "cjson"
-  variable. Redundant from Lua 5.2 onwards.
-
-
 Make
 ~~~~
 
@@ -115,6 +106,18 @@ the rockspec before building this module.
 
 Review the http://luarocks.org/en/Documentation[LuaRocks documentation]
 for further details.
+
+
+Build Options (#define)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+[horizontal]
+USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing ++isinf++(3).
+DISABLE_CJSON_GLOBAL:: Do not store module table in global "cjson"
+  variable. Redundant from Lua 5.2 onwards.
+DISABLE_INVALID_NUMBERS:: Recommended on platforms where ++strtod++(3) /
+  ++sprintf++(3) are not POSIX compliant (Eg, Windows MinGW). Restricts
+  the +cjson.refuse_invalid_numbers+ runtime configuration to +true+.
 
 
 API (Functions)

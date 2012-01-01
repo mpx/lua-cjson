@@ -67,6 +67,11 @@
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
 
+#ifdef DISABLE_INVALID_NUMBERS
+#undef DEFAULT_DECODE_REFUSE_BADNUM
+#define DEFAULT_DECODE_REFUSE_BADNUM 1
+#endif
+
 typedef enum {
     T_OBJ_BEGIN,
     T_OBJ_END,
@@ -340,6 +345,16 @@ static int json_cfg_refuse_invalid_numbers(lua_State *l)
     json_enum_option(l, options_enc_dec,
                      &cfg->encode_refuse_badnum,
                      &cfg->decode_refuse_badnum);
+
+#if DISABLE_INVALID_NUMBERS
+    /* Some non-POSIX platforms don't handle double <-> string translations
+     * for Infinity/NaN/hexadecimal properly. Throw an error if the
+     * user attempts to enable them. */
+    if (!cfg->encode_refuse_badnum || !cfg->decode_refuse_badnum) {
+        cfg->encode_refuse_badnum = cfg->decode_refuse_badnum = 1;
+        luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
+    }
+#endif
 
     return 1;
 }

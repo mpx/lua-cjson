@@ -25,14 +25,17 @@ build = {
         cjson = {
             sources = { "lua_cjson.c", "strbuf.c", "fpconv.c" },
             defines = {
--- Optional workaround:
--- USE_INTERNAL_ISINF:  Provide internal isinf() implementation. Required
---                      on some Solaris platforms.
 -- LuaRocks does not support platform specific configuration for Solaris.
--- Uncomment the line below on Solaris platforms.
+-- Uncomment the line below on Solaris platforms if required.
 --                "USE_INTERNAL_ISINF"
             }
         }
+    },
+    -- Override default build options (per platform)
+    platforms = {
+        win32 = { modules = { cjson = { defines = {
+            "DISABLE_INVALID_NUMBERS"
+        } } } }
     },
     copy_directories = { "tests" }
 }

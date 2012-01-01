@@ -2,8 +2,10 @@ LUA_VERSION =   5.1
 
 ## Available defines for CJSON_CFLAGS
 #
-# USE_INTERNAL_ISINF:   Workaround for Solaris platforms missing isinf().
-# DISABLE_CJSON_GLOBAL: Do not store module is "cjson" global
+# USE_INTERNAL_ISINF:      Workaround for Solaris platforms missing isinf().
+# DISABLE_CJSON_GLOBAL:    Do not store module is "cjson" global.
+# DISABLE_INVALID_NUMBERS: Permanently disable invalid JSON numbers:
+#                          - NaN, Infinity, hex.
 
 ## Build defaults
 TARGET =            cjson.so
@@ -38,7 +40,7 @@ INSTALL_CMD =       install
 ## Windows (MinGW)
 #TARGET =            cjson.dll
 #PREFIX =            /home/user/opt
-#CJSON_CFLAGS =
+#CJSON_CFLAGS =      -DDISABLE_INVALID_NUMBERS
 #CJSON_LDFLAGS =     -shared -L$(PREFIX)/lib -llua51
 
 ## End platform specific section
