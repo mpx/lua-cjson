@@ -48,7 +48,7 @@ Build Options (#define)
 [horizontal]
 USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing isinf().
 DISABLE_CJSON_GLOBAL:: Do not store module table in global "cjson"
-  variable.
+  variable. Redundant from Lua 5.2 onwards.
 
 
 Make
@@ -150,10 +150,10 @@ local cjson = require "cjson"
 local cjson2 = cjson.new()
 ------------
 
-Lua CJSON can be loaded via +require+. A global +cjson+ table is
-registered under Lua 5.1 to maintain backward compatibility. Lua CJSON
-does not register a global table under Lua 5.2 since this practice is
-discouraged.
+Lua CJSON can be loaded via the Lua +require+ function. A global
++cjson+ module table is registered under Lua 5.1 to maintain backward
+compatibility. Lua CJSON does not register a global table under Lua
+5.2 since this practice is discouraged.
 
 +cjson.new+ can be used to instantiate an independent copy of the Lua
 CJSON module. The new module has a separate persistent encoding
@@ -164,9 +164,21 @@ threads within a single Lua state provided the persistent encoding
 buffer is not shared. This can be achieved by one of the following
 methods:
 
-- Disabling the persistent encoding buffer with +encode_keep_buffer+.
-- Ensuring only a single thread calls +encode+ at a time.
-- Using a separate +cjson+ instantiation per pre-emptive thread.
+- Disabling the persistent encoding buffer with
+  +cjson.encode_keep_buffer+.
+- Ensuring each thread calls +cjson.encode+ at a time.
+- Using a separate +cjson+ module table per pre-emptive thread
+  (+cjson.new+).
+
+[NOTE]
+Lua CJSON uses ++strtod++(3) and ++snprintf++(3) to perform numeric
+conversion as they are usually well supported, fast and bug free.
+However, these functions require a workaround for JSON
+encoding/parsing under locales using a comma decimal separator. Lua
+CJSON detects the current locale during instantiation to determine
+whether a workaround is required. CJSON should be reinitialised via
++cjson.new+ if the locale of the current process changes. Different
+locales per thread are not supported.
 
 
 decode

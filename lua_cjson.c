@@ -571,8 +571,6 @@ static void json_append_number(lua_State *l, json_config_t *cfg,
         /* Some platforms may print -nan, just hard code it */
         strbuf_append_mem(json, "nan", 3);
     } else {
-        /* Longest double printed with %.14g is 21 characters long:
-         * -1.7976931348623e+308 */
         strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE);
         len = fpconv_g_fmt(strbuf_empty_ptr(json), num, cfg->encode_number_precision);
         strbuf_extend_length(json, len);
@@ -1283,9 +1281,8 @@ static int lua_cjson_new(lua_State *l)
         { NULL, NULL }
     };
 
-    /* Update the current locale for g_fmt/strtod.
-     * Using different locales per-thread is not supported. */
-    fpconv_update_locale();
+    /* Initialise number conversions */
+    fpconv_init();
 
     /* cjson module table */
     lua_newtable(l);
