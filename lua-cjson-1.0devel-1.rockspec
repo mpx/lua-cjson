@@ -6,10 +6,14 @@ source = {
 }
 
 description = {
-    summary = "Fast JSON encoding/parsing support for Lua",
+    summary = "A fast JSON encoding/parsing library",
     detailed = [[
-        Lua CJSON provides fast UTF-8 JSON parsing/encoding support for Lua,
-        and has no external dependencies.
+        The Lua CJSON library provides JSON support for Lua. It features:
+        - Fast, standards compliant encoding/parsing routines
+        - Full support for JSON with UTF-8, including decoding surrogate pairs
+        - Optional run-time support for common exceptions to the JSON specification
+          (NaN, Infinity,..)
+        - No external dependencies
     ]],
     homepage = "http://www.kyne.com.au/~mark/software/lua-cjson.php",
     license = "MIT"

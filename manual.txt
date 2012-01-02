@@ -5,14 +5,15 @@ Mark Pulford <mark@kyne.com.au>
 Overview
 --------
 
-Lua CJSON provides fast JSON parsing and encoding support for Lua.
+The Lua CJSON library provides JSON support for Lua.
 
 .Features
-- More than 10x to 20x faster than efficient pure Lua JSON modules.
+- Fast, standards compliant encoding/parsing routines
 - Full support for JSON with UTF-8, including decoding surrogate
-  pairs.
+  pairs
 - Optional run-time support for common exceptions to the JSON
-  specification (NaN, Infinity,..).
+  specification (NaN, Infinity,..)
+- No external dependencies
 
 .Caveats
 - UTF-16 and UTF-32 are not supported.
