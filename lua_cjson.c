@@ -332,7 +332,7 @@ static void json_enum_option(lua_State *l, const char **options,
 }
 
 
-/* When enabled, rejects: NaN, Infinity, hexidecimal numbers */
+/* When enabled, rejects: NaN, Infinity, hexadecimal numbers */
 static int json_cfg_refuse_invalid_numbers(lua_State *l)
 {
     static const char *options_enc_dec[] = { "none", "encode", "decode",
@@ -929,7 +929,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
  * json_next_number_token() uses strtod() which allows other forms:
  * - numbers starting with '+'
  * - NaN, -NaN, infinity, -infinity
- * - hexidecimal numbers
+ * - hexadecimal numbers
  * - numbers with leading zeros
  *
  * json_is_invalid_number() detects "numbers" which may pass strtod()'s

@@ -169,10 +169,10 @@ buffer is not shared. This can be achieved by one of the following
 methods:
 
 - Disabling the persistent encoding buffer with
-  +cjson.encode_keep_buffer+.
-- Ensuring each thread calls +cjson.encode+ at a time.
+  +cjson.encode_keep_buffer+
+- Ensuring each thread calls +cjson.encode+ at a time
 - Using a separate +cjson+ module table per pre-emptive thread
-  (+cjson.new+).
+  (+cjson.new+)
 
 [NOTE]
 Lua CJSON uses ++strtod++(3) and ++snprintf++(3) to perform numeric
@@ -208,7 +208,7 @@ JSON +null+ will be converted to a NULL +lightuserdata+ value. This
 can be compared with +cjson.null+ for convenience.
 
 By default, numbers incompatible with the JSON specification (NaN,
-Infinity, Hexidecimal) can be decoded. This default can be changed
+Infinity, Hexadecimal) can be decoded. This default can be changed
 with +cjson.refuse_invalid_numbers+.
 
 .Example: Decoding
@@ -287,8 +287,8 @@ on sparse array handling.
 
 Lua CJSON does not use metamethods when serialising tables.
 
-- +rawget+ is used to iterate over Lua arrays.
-- +next+ is used to iterate over Lua objects.
+- +rawget+ is used to iterate over Lua arrays
+- +next+ is used to iterate over Lua objects
 
 JSON object keys are always strings. +cjson.encode+ can only handle
 table keys which are type +number+ or +string+. All other types will
@@ -302,7 +302,7 @@ This may not be required by some applications.
 
 By default, the following Lua values will generate errors:
 
-- Numbers incompatible with the JSON specification (NaN, Infinity, Hexidecimal)
+- Numbers incompatible with the JSON specification (NaN, Infinity, Hexadecimal)
 - Tables nested more than 20 levels deep
 - Excessively sparse Lua arrays
 
