@@ -1,13 +1,12 @@
-LUA_VERSION =   5.1
+##### Available defines for CJSON_CFLAGS #####
+##
+## USE_INTERNAL_ISINF:      Workaround for Solaris platforms missing isinf().
+## DISABLE_CJSON_GLOBAL:    Do not store module is "cjson" global.
+## DISABLE_INVALID_NUMBERS: Permanently disable invalid JSON numbers:
+##                          NaN, Infinity, hex.
 
-## Available defines for CJSON_CFLAGS
-#
-# USE_INTERNAL_ISINF:      Workaround for Solaris platforms missing isinf().
-# DISABLE_CJSON_GLOBAL:    Do not store module is "cjson" global.
-# DISABLE_INVALID_NUMBERS: Permanently disable invalid JSON numbers:
-#                          - NaN, Infinity, hex.
-
-## Build defaults
+##### Build defaults #####
+LUA_VERSION =       5.1
 TARGET =            cjson.so
 PREFIX =            /usr/local
 #CFLAGS =            -g -Wall -pedantic -fno-inline
@@ -18,12 +17,12 @@ LUA_INCLUDE_DIR =   $(PREFIX)/include
 LUA_MODULE_DIR =    $(PREFIX)/lib/lua/$(LUA_VERSION)
 INSTALL_CMD =       install
 
-## Platform overrides
-#
-# Tweak one of the platform sections below to suit your situation.
-#
-# See http://lua-users.org/wiki/BuildingModules for further platform
-# specific details.
+##### Platform overrides #####
+##
+## Tweak one of the platform sections below to suit your situation.
+##
+## See http://lua-users.org/wiki/BuildingModules for further platform
+## specific details.
 
 ## Linux
 
@@ -43,7 +42,7 @@ INSTALL_CMD =       install
 #CJSON_CFLAGS =      -DDISABLE_INVALID_NUMBERS
 #CJSON_LDFLAGS =     -shared -L$(PREFIX)/lib -llua51
 
-## End platform specific section
+##### End customisable sections #####
 
 BUILD_CFLAGS =      -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
 OBJS :=             lua_cjson.o strbuf.o fpconv.o
