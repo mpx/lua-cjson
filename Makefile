@@ -35,7 +35,7 @@ INSTALL_CMD =       install
 #CJSON_LDFLAGS =     -bundle -undefined dynamic_lookup
 
 ## Solaris
-#CJSON_CFLAGS =      -DUSE_INTERNAL_ISINF
+#CJSON_CFLAGS =      -fpic -DUSE_INTERNAL_ISINF
 
 ## Windows (MinGW)
 #TARGET =            cjson.dll
@@ -60,9 +60,9 @@ doc: manual.html
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $(CJSON_LDFLAGS) -o $@ $(OBJS)
 
-install: cjson.so
+install: $(TARGET)
 	mkdir -p $(DESTDIR)/$(LUA_MODULE_DIR)
-	$(INSTALL_CMD) cjson.so $(DESTDIR)/$(LUA_MODULE_DIR)
+	$(INSTALL_CMD) $(TARGET) $(DESTDIR)/$(LUA_MODULE_DIR)
 
 manual.html: manual.txt
 	asciidoc -n -a toc manual.txt
