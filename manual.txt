@@ -121,6 +121,22 @@ DISABLE_INVALID_NUMBERS:: Recommended on platforms where ++strtod++(3) /
   the +cjson.refuse_invalid_numbers+ runtime configuration to +true+.
 
 
+Built-in dtoa() support
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Lua CJSON may be built with David Gay's
+http://www.netlib.org/fp/[floating point conversion routines]. This
+can increase overall performance by 50% or more on some platforms when
+converting data number heavy data. However, this option reduces
+portability and is disabled by default.
+
+[horizontal]
+USE_INTERNAL_DTOA:: Enable internal number conversion routines.
+IEEE_BIG_ENDIAN:: Must be set on big endian architectures.
+MULTIPLE_THREADS:: Must be set when Lua CJSON may be used in a
+  multi-threaded application. Requries _pthreads_.
+
+
 API (Functions)
 ---------------
 
