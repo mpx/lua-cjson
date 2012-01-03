@@ -1,10 +1,10 @@
 #!/usr/bin/env lua
 
--- usage: decode.lua [json_file]
+-- usage: json2lua.lua [json_file]
 --
 -- Eg:
--- echo '[ "testing" ]' | ./decode.lua
--- ./decode.lua test.json
+-- echo '[ "testing" ]' | ./json2lua.lua
+-- ./json2lua.lua test.json
 
 local json = require "cjson"
 local misc = require "cjson-misc"
