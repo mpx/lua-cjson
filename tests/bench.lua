@@ -6,9 +6,24 @@
 --
 -- Mark Pulford <mark@kyne.com.au>
 
+local json_module = os.getenv("JSON_MODULE") or "cjson"
+
 require "socket"
-local json = require "cjson"
+local json = require(json_module)
 local misc = require "cjson-misc"
+
+local function find_func(mod, funcnames)
+    for _, v in ipairs(funcnames) do
+        if mod[v] then
+            return mod[v]
+        end
+    end
+
+    return nil
+end
+
+local json_encode = find_func(json, { "encode", "Encode", "to_string", "stringify", "json" })
+local json_decode = find_func(json, { "decode", "Decode", "to_value", "parse" })
 
 function benchmark(tests, seconds, rep)
     local function bench(func, iter)
@@ -54,29 +69,33 @@ end
 
 function bench_file(filename)
     local data_json = misc.file_load(filename)
-    local data_obj = json.decode(data_json)
+    local data_obj = json_decode(data_json)
 
-    local function test_encode ()
-        json.encode(data_obj)
+    local function test_encode()
+        json_encode(data_obj)
     end
-    local function test_decode ()
-        json.decode(data_json)
+    local function test_decode()
+        json_decode(data_json)
     end
 
-    local tests = {
-        encode = test_encode,
-        decode = test_decode
-    }
+    local tests = {}
+    if json_encode then tests.encode = test_encode end
+    if json_decode then tests.decode = test_decode end
 
     return benchmark(tests, 0.1, 5)
 end
 
-json.encode_keep_buffer(true)
+-- Optionally load any custom configuration required for this module
+local success, data = pcall(misc.file_load, string.format("bench-%s.lua", json_module))
+if success then
+    misc.run_script(data, _G)
+    configure(json)
+end
 
 for i = 1, #arg do
     local results = bench_file(arg[i])
     for k, v in pairs(results) do
-        print(string.format("%s: %s: %d", arg[i], k, v))
+        print(string.format("%s\t%s\t%d", arg[i], k, v))
     end
 end
 

@@ -9,34 +9,12 @@
 local json = require "cjson"
 local misc = require "cjson-misc"
 
-function get_lua_table(s)
-    local env = {}
-    local func
+local env = {
+    json = { null = json.null },
+    null = json.null
+}
 
-    env.json = {}
-    env.json.null = json.null
-    env.null = json.null
-    s = "data = " .. s
-
-    -- Use setfenv() if it exists, otherwise assume Lua 5.2 load() exists
-    if _G.setfenv then
-        func = loadstring(s)
-        if func then
-            setfenv(func, env)
-        end
-    else
-        func = load(s, nil, nil, env)
-    end
-
-	if func == nil then
-		error("Invalid syntax. Failed to parse Lua table.")
-	end
-	func()
-
-    return env.data
-end
-
-local t = get_lua_table(misc.file_load(arg[1]))
-print(json.encode(t))
+local t = misc.run_script("data = " .. misc.file_load(arg[1]), env)
+print(json.encode(t.data))
 
 -- vi:ai et sw=4 ts=4:

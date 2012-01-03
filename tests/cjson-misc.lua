@@ -239,6 +239,29 @@ local function run_test_group(testgroup, tests)
     end
 end
 
+-- Run a Lua script in a separate environment
+local function run_script(script, env)
+    local env = env or {}
+    local func
+
+    -- Use setfenv() if it exists, otherwise assume Lua 5.2 load() exists
+    if _G.setfenv then
+        func = loadstring(script)
+        if func then
+            setfenv(func, env)
+        end
+    else
+        func = load(script, nil, nil, env)
+    end
+
+    if func == nil then
+            error("Invalid syntax.")
+    end
+    func()
+
+    return env
+end
+
 -- Export functions
 return {
     serialise_value = serialise_value,
@@ -247,7 +270,8 @@ return {
     compare_values = compare_values,
     run_test_summary = run_test_summary,
     run_test = run_test,
-    run_test_group = run_test_group
+    run_test_group = run_test_group,
+    run_script = run_script
 }
 
 -- vi:ai et sw=4 ts=4:
