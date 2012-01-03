@@ -50,12 +50,20 @@ static pthread_mutex_t private_dtoa_lock[2] = {
     PTHREAD_MUTEX_INITIALIZER
 };
 
-#define ACQUIRE_DTOA_LOCK(n)    do {            \
-    pthread_mutex_lock(&private_dtoa_lock[n]);   \
+#define ACQUIRE_DTOA_LOCK(n)    do {                                \
+    int r = pthread_mutex_lock(&private_dtoa_lock[n]);              \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_lock failed with %d\n", r);  \
+        abort();                                                    \
+    }                                                               \
 } while (0)
 
-#define FREE_DTOA_LOCK(n)   do {                \
-    pthread_mutex_unlock(&private_dtoa_lock[n]); \
+#define FREE_DTOA_LOCK(n)   do {                                    \
+    int r = pthread_mutex_unlock(&private_dtoa_lock[n]);            \
+    if (r) {                                                        \
+        fprintf(stderr, "pthread_mutex_unlock failed with %d\n", r);\
+        abort();                                                    \
+    }                                                               \
 } while (0)
 
 #endif  /* MULTIPLE_THREADS */
