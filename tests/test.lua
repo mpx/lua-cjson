@@ -6,8 +6,8 @@
 --
 -- Note: The output of this script is easier to read with "less -S"
 
-require "common"
 local json = require "cjson"
+local misc = require "cjson-misc"
 
 local function gen_ascii()
     local chars = {}
@@ -50,14 +50,14 @@ end
 function test_decode_cycle(filename)
     local obj1 = json.decode(file_load(filename))
     local obj2 = json.decode(json.encode(obj1))
-    return compare_values(obj1, obj2)
+    return misc.compare_values(obj1, obj2)
 end
 
 local Inf = math.huge;
 local NaN = math.huge * 0;
 local octets_raw = gen_ascii()
-local octets_escaped = file_load("octets-escaped.dat")
-local utf8_loaded, utf8_raw = pcall(file_load, "utf8.dat")
+local octets_escaped = misc.file_load("octets-escaped.dat")
+local utf8_loaded, utf8_raw = pcall(misc.file_load, "utf8.dat")
 if not utf8_loaded then
     utf8_raw = "Failed to load utf8.dat"
 end
@@ -224,23 +224,23 @@ local locale_tests = {
 
 print(string.format("Testing Lua CJSON version %s\n", json.version))
 
-run_test_group("decode simple value", decode_simple_tests)
-run_test_group("encode simple value", encode_simple_tests)
-run_test_group("decode numeric", decode_numeric_tests)
-run_test_group("encode table", encode_table_tests)
-run_test_group("decode error", decode_error_tests)
-run_test_group("encode error", encode_error_tests)
-run_test_group("escape", escape_tests)
-run_test_group("locale", locale_tests)
+misc.run_test_group("decode simple value", decode_simple_tests)
+misc.run_test_group("encode simple value", encode_simple_tests)
+misc.run_test_group("decode numeric", decode_numeric_tests)
+misc.run_test_group("encode table", encode_table_tests)
+misc.run_test_group("decode error", decode_error_tests)
+misc.run_test_group("encode error", encode_error_tests)
+misc.run_test_group("escape", escape_tests)
+misc.run_test_group("locale", locale_tests)
 
 json.refuse_invalid_numbers(false)
 json.encode_max_depth(20)
 for i = 1, #arg do
-    run_test("decode cycle " .. arg[i], test_decode_cycle, { arg[i] },
-             true, { true })
+    misc.run_test("decode cycle " .. arg[i], test_decode_cycle, { arg[i] },
+                  true, { true })
 end
 
-local pass, total = run_test_summary()
+local pass, total = misc.run_test_summary()
 
 if pass == total then
     print("==> Summary: all tests succeeded")

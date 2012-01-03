@@ -6,10 +6,9 @@
 --
 -- Mark Pulford <mark@kyne.com.au>
 
-require "common"
 require "socket"
-
 local json = require "cjson"
+local misc = require "cjson-misc"
 
 function benchmark(tests, seconds, rep)
     local function bench(func, iter)
@@ -54,7 +53,7 @@ function benchmark(tests, seconds, rep)
 end
 
 function bench_file(filename)
-    local data_json = file_load(filename)
+    local data_json = misc.file_load(filename)
     local data_obj = json.decode(data_json)
 
     local function test_encode ()

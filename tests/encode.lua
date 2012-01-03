@@ -6,11 +6,11 @@
 -- echo '{ "testing" }' | ./encode.lua
 -- ./encode.lua lua_data.lua
 
-require "common"
 local json = require "cjson"
+local misc = require "cjson-misc"
 
 function get_lua_table(file)
-	local func = loadstring("data = " .. file_load(file))
+	local func = loadstring("data = " .. misc.file_load(file))
 	if func == nil then
 		error("Invalid syntax? Lua table required.")
 	end

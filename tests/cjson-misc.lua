@@ -10,7 +10,7 @@ local json = require "cjson"
 -- -1   Not an array
 -- 0    Empty table
 -- >0   Highest index in the array
-function is_array(table)
+local function is_array(table)
     local max = 0
     local count = 0
     for k, v in pairs(table) do
@@ -28,7 +28,9 @@ function is_array(table)
     return max
 end
 
-function serialise_table(value, indent, depth)
+local serialise_value
+
+local function serialise_table(value, indent, depth)
     local spacing, spacing2, indent2
     if indent then
         spacing = "\n" .. indent
@@ -91,11 +93,7 @@ function serialise_value(value, indent, depth)
     end
 end
 
-function dump_value(value)
-    print(serialise_value(value))
-end
-
-function file_load(filename)
+local function file_load(filename)
     local file
     if filename == nil then
         file = io.stdin
@@ -119,7 +117,7 @@ function file_load(filename)
     return data
 end
 
-function file_save(filename, data)
+local function file_save(filename, data)
     local file
     if filename == nil then
         file = io.stdout
@@ -136,7 +134,7 @@ function file_save(filename, data)
     end
 end
 
-function compare_values(val1, val2)
+local function compare_values(val1, val2)
     local type1 = type(val1)
     local type2 = type(val2)
     if type1 ~= type2 then
@@ -179,11 +177,11 @@ end
 local test_count_pass = 0
 local test_count_total = 0
 
-function run_test_summary()
+local function run_test_summary()
     return test_count_pass, test_count_total
 end
 
-function run_test(testname, func, input, should_work, output)
+local function run_test(testname, func, input, should_work, output)
     local function status_line(name, status, value)
         local statusmap = { [true] = ":success", [false] = ":error" }
         if status ~= nil then
@@ -216,7 +214,7 @@ function run_test(testname, func, input, should_work, output)
     return correct, result
 end
 
-function run_test_group(testgroup, tests)
+local function run_test_group(testgroup, tests)
     local function run_config(configname, func)
         local success, msg = pcall(func)
         if msg then
@@ -240,5 +238,16 @@ function run_test_group(testgroup, tests)
         end
     end
 end
+
+-- Export functions
+return {
+    serialise_value = serialise_value,
+    file_load = file_load,
+    file_save = file_save,
+    compare_values = compare_values,
+    run_test_summary = run_test_summary,
+    run_test = run_test,
+    run_test_group = run_test_group
+}
 
 -- vi:ai et sw=4 ts=4:
