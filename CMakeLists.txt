@@ -3,18 +3,45 @@
 #       Unix: export LUA_DIR=/home/user/pkg
 #       Windows: set LUA_DIR=c:\lua51
 
-project(lua_cjson C)
+project(lua-cjson C)
 cmake_minimum_required(VERSION 2.6)
 
-set(CMAKE_BUILD_TYPE Release)
+option(USE_INTERNAL_DTOA "Use internal strtod() / dtoa code for performance")
+option(MULTIPLE_THREADS
+       "Build internal dtoa with support for multi-threaded applications - recommended" ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING
+        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
+        FORCE)
+endif()
 
 find_package(Lua51 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
-include(TestBigEndian)
-TEST_BIG_ENDIAN(BIG_ENDIAN)
-if(HAVE_BIG_ENDIAN)
-    add_definitions(-DIEEE_BIG_ENDIAN)
+if(NOT USE_INTERNAL_DTOA)
+    # Use libc number conversion routines (strtod(), sprintf())
+    set(FPCONV_SOURCES fpconv.c)
+else()
+    # Use internal number conversion routines
+    add_definitions(-DUSE_INTERNAL_DTOA)
+    set(FPCONV_SOURCES g_fmt.c dtoa.c)
+
+    include(TestBigEndian)
+    TEST_BIG_ENDIAN(IEEE_BIG_ENDIAN)
+    if(IEEE_BIG_ENDIAN)
+        add_definitions(-DIEEE_BIG_ENDIAN)
+    endif()
+
+    if(MULTIPLE_THREADS)
+        set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+        find_package(Threads REQUIRED)
+        if(NOT CMAKE_USE_PTHREADS_INIT)
+            message(FATAL_ERROR
+                    "Pthreads not found - required by MULTIPLE_THREADS option")
+        endif()
+        add_definitions(-DMULTIPLE_THREADS)
+    endif()
 endif()
 
 # Handle platforms missing isinf() macro (Eg, some Solaris systems).
@@ -36,8 +63,15 @@ else()
     set(_lua_module_dir "${_lua_lib_dir}/lua/5.1")
 endif()
 
-add_library(cjson MODULE lua_cjson.c strbuf.c fpconv.c)
+set(_MODULE_LINK "${CMAKE_THREAD_LIBS_INIT}")
+if(WIN32)
+    # Win32 modules need to be linked to the Lua library.
+    set(_MODULE_LINK ${LUA_LIBRARY} ${_MODULE_LINK})
+endif()
+
+add_library(cjson MODULE lua_cjson.c strbuf.c ${FPCONV_SOURCES})
 set_target_properties(cjson PROPERTIES PREFIX "")
+target_link_libraries(cjson ${_MODULE_LINK})
 install(TARGETS cjson DESTINATION "${_lua_module_dir}")
 
 # vi:ai et sw=4 ts=4:
