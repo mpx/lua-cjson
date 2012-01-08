@@ -127,7 +127,7 @@ typedef struct {
 
 typedef struct {
     const char *data;
-    int index;
+    const char *ptr;
     strbuf_t *tmp;    /* Temporary storage for strings */
     json_config_t *cfg;
 } json_parse_t;
@@ -806,7 +806,7 @@ static int json_append_unicode_escape(json_parse_t *json)
     int escape_len = 6;
 
     /* Fetch UTF-16 code unit */
-    codepoint = decode_hex4(&json->data[json->index + 2]);
+    codepoint = decode_hex4(json->ptr + 2);
     if (codepoint < 0)
         return -1;
 
@@ -822,13 +822,13 @@ static int json_append_unicode_escape(json_parse_t *json)
             return -1;
 
         /* Ensure the next code is a unicode escape */
-        if (json->data[json->index + escape_len] != '\\' ||
-            json->data[json->index + escape_len + 1] != 'u') {
+        if (*(json->ptr + escape_len) != '\\' ||
+            *(json->ptr + escape_len + 1) != 'u') {
             return -1;
         }
 
         /* Fetch the next codepoint */
-        surrogate_low = decode_hex4(&json->data[json->index + 2 + escape_len]);
+        surrogate_low = decode_hex4(json->ptr + 2 + escape_len);
         if (surrogate_low < 0)
             return -1;
 
@@ -850,7 +850,7 @@ static int json_append_unicode_escape(json_parse_t *json)
 
     /* Append bytes and advance parse index */
     strbuf_append_mem_unsafe(json->tmp, utf8, len);
-    json->index += escape_len;
+    json->ptr += escape_len;
 
     return 0;
 }
@@ -859,7 +859,7 @@ static void json_set_token_error(json_token_t *token, json_parse_t *json,
                                  const char *errtype)
 {
     token->type = T_ERROR;
-    token->index = json->index;
+    token->index = json->ptr - json->data;
     token->value.string = errtype;
 }
 
@@ -869,10 +869,10 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
     char ch;
 
     /* Caller must ensure a string is next */
-    assert(json->data[json->index] == '"');
+    assert(*json->ptr == '"');
 
     /* Skip " */
-    json->index++;
+    json->ptr++;
 
     /* json->tmp is the temporary strbuf used to accumulate the
      * decoded string value.
@@ -880,7 +880,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
      */
     strbuf_reset(json->tmp);
 
-    while ((ch = json->data[json->index]) != '"') {
+    while ((ch = *json->ptr) != '"') {
         if (!ch) {
             /* Premature end of the string */
             json_set_token_error(token, json, "unexpected end of string");
@@ -890,7 +890,7 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
         /* Handle escapes */
         if (ch == '\\') {
             /* Fetch escape character */
-            ch = json->data[json->index + 1];
+            ch = *(json->ptr + 1);
 
             /* Translate escape code and append to tmp string */
             ch = escape2char[(unsigned char)ch];
@@ -908,14 +908,14 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
             }
 
             /* Skip '\' */
-            json->index++;
+            json->ptr++;
         }
         /* Append normal character or translated single character
          * Unicode escapes are handled above */
         strbuf_append_char_unsafe(json->tmp, ch);
-        json->index++;
+        json->ptr++;
     }
-    json->index++;  /* Eat final quote (") */
+    json->ptr++;    /* Eat final quote (") */
 
     strbuf_ensure_null(json->tmp);
 
@@ -940,33 +940,33 @@ static void json_next_string_token(json_parse_t *json, json_token_t *token)
  */
 static int json_is_invalid_number(json_parse_t *json)
 {
-    int i = json->index;
+    const char *p = json->ptr;
 
     /* Reject numbers starting with + */
-    if (json->data[i] == '+')
+    if (*p == '+')
         return 1;
 
     /* Skip minus sign if it exists */
-    if (json->data[i] == '-')
-        i++;
+    if (*p == '-')
+        p++;
 
     /* Reject numbers starting with 0x, or leading zeros */
-    if (json->data[i] == '0') {
-        int ch2 = json->data[i + 1];
+    if (*p == '0') {
+        int ch2 = *(p + 1);
 
         if ((ch2 | 0x20) == 'x' ||          /* Hex */
             ('0' <= ch2 && ch2 <= '9'))     /* Leading zero */
             return 1;
 
         return 0;
-    } else if (json->data[i] <= '9') {
+    } else if (*p <= '9') {
         return 0;                           /* Ordinary number */
     }
 
     /* Reject inf/nan */
-    if (!strncasecmp(&json->data[i], "inf", 3))
+    if (!strncasecmp(p, "inf", 3))
         return 1;
-    if (!strncasecmp(&json->data[i], "nan", 3))
+    if (!strncasecmp(p, "nan", 3))
         return 1;
 
     /* Pass all other numbers which may still be invalid, but
@@ -976,35 +976,39 @@ static int json_is_invalid_number(json_parse_t *json)
 
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
-    const char *startptr;
     char *endptr;
 
     token->type = T_NUMBER;
-    startptr = &json->data[json->index];
-    token->value.number = fpconv_strtod(&json->data[json->index], &endptr);
-    if (startptr == endptr)
+    token->value.number = fpconv_strtod(json->ptr, &endptr);
+    if (json->ptr == endptr)
         json_set_token_error(token, json, "invalid number");
     else
-        json->index += endptr - startptr;   /* Skip the processed number */
+        json->ptr = endptr;     /* Skip the processed number */
 
     return;
 }
 
 /* Fills in the token struct.
  * T_STRING will return a pointer to the json_parse_t temporary string
- * T_ERROR will leave the json->index pointer at the error.
+ * T_ERROR will leave the json->ptr pointer at the error.
  */
 static void json_next_token(json_parse_t *json, json_token_t *token)
 {
     json_token_type_t *ch2token = json->cfg->ch2token;
     int ch;
 
-    /* Eat whitespace. FIXME: UGLY */
-    token->type = ch2token[(unsigned char)json->data[json->index]];
-    while (token->type == T_WHITESPACE)
-        token->type = ch2token[(unsigned char)json->data[++json->index]];
+    /* Eat whitespace. */
+    while (1) {
+        ch = (unsigned char)*(json->ptr);
+        token->type = ch2token[ch];
+        if (token->type != T_WHITESPACE)
+            break;
+        json->ptr++;
+    }
 
-    token->index = json->index;
+    /* Store location of new token. Required when throwing errors
+     * for unexpected tokens (syntax errors). */
+    token->index = json->ptr - json->data;
 
     /* Don't advance the pointer for an error or the end */
     if (token->type == T_ERROR) {
@@ -1018,14 +1022,13 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
 
     /* Found a known single character token, advance index and return */
     if (token->type != T_UNKNOWN) {
-        json->index++;
+        json->ptr++;
         return;
     }
 
-    /* Process characters which triggered T_UNKNOWN */
-    ch = json->data[json->index];
-
-    /* Must use strncmp() to match the front of the JSON string.
+    /* Process characters which triggered T_UNKNOWN
+     *
+     * Must use strncmp() to match the front of the JSON string.
      * JSON identifier must be lowercase.
      * When strict_numbers if disabled, either case is allowed for
      * Infinity/NaN (since we are no longer following the spec..) */
@@ -1039,19 +1042,19 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         }
         json_next_number_token(json, token);
         return;
-    } else if (!strncmp(&json->data[json->index], "true", 4)) {
+    } else if (!strncmp(json->ptr, "true", 4)) {
         token->type = T_BOOLEAN;
         token->value.boolean = 1;
-        json->index += 4;
+        json->ptr += 4;
         return;
-    } else if (!strncmp(&json->data[json->index], "false", 5)) {
+    } else if (!strncmp(json->ptr, "false", 5)) {
         token->type = T_BOOLEAN;
         token->value.boolean = 0;
-        json->index += 5;
+        json->ptr += 5;
         return;
-    } else if (!strncmp(&json->data[json->index], "null", 4)) {
+    } else if (!strncmp(json->ptr, "null", 4)) {
         token->type = T_NULL;
-        json->index += 4;
+        json->ptr += 4;
         return;
     } else if (!json->cfg->decode_refuse_badnum &&
                json_is_invalid_number(json)) {
@@ -1219,7 +1222,7 @@ static void lua_json_decode(lua_State *l, const char *json_text, int json_len)
 
     json.cfg = json_fetch_config(l);
     json.data = json_text;
-    json.index = 0;
+    json.ptr = json.data;
 
     /* Ensure the temporary buffer can hold the entire string.
      * This means we no longer need to do length checks since the decoded
