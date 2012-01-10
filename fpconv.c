@@ -81,6 +81,7 @@ static int strtod_buffer_size(const char *s)
  * character. Guaranteed to be called at the start of any valid number in a string */
 double fpconv_strtod(const char *nptr, char **endptr)
 {
+    char localbuf[FPCONV_G_FMT_BUFSIZE];
     char *buf, *endbuf, *dp;
     int buflen;
     double value;
@@ -97,10 +98,16 @@ double fpconv_strtod(const char *nptr, char **endptr)
     }
 
     /* Duplicate number into buffer */
-    buf = malloc(buflen + 1);
-    if (!buf) {
-        fprintf(stderr, "Out of memory");
-        abort();
+    if (buflen >= FPCONV_G_FMT_BUFSIZE) {
+        /* Handle unusually large numbers */
+        buf = malloc(buflen + 1);
+        if (!buf) {
+            fprintf(stderr, "Out of memory");
+            abort();
+        }
+    } else {
+        /* This is the common case.. */
+        buf = localbuf;
     }
     memcpy(buf, nptr, buflen);
     buf[buflen] = 0;
@@ -112,7 +119,8 @@ double fpconv_strtod(const char *nptr, char **endptr)
 
     value = strtod(buf, &endbuf);
     *endptr = (char *)&nptr[endbuf - buf];
-    free(buf);
+    if (buflen >= FPCONV_G_FMT_BUFSIZE)
+        free(buf);
 
     return value;
 }
