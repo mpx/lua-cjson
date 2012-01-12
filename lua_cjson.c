@@ -39,6 +39,7 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include <lua.h>
 #include <lauxlib.h>
 
@@ -61,7 +62,8 @@
 #define DEFAULT_SPARSE_CONVERT 0
 #define DEFAULT_SPARSE_RATIO 2
 #define DEFAULT_SPARSE_SAFE 10
-#define DEFAULT_MAX_DEPTH 20
+#define DEFAULT_ENCODE_MAX_DEPTH 20
+#define DEFAULT_DECODE_MAX_DEPTH 20
 #define DEFAULT_ENCODE_REFUSE_BADNUM 1
 #define DEFAULT_DECODE_REFUSE_BADNUM 0
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
@@ -120,9 +122,11 @@ typedef struct {
     int encode_sparse_safe;
     int encode_max_depth;
     int encode_refuse_badnum;
-    int decode_refuse_badnum;
-    int encode_keep_buffer;
     int encode_number_precision;
+    int encode_keep_buffer;
+
+    int decode_refuse_badnum;
+    int decode_max_depth;
 } json_config_t;
 
 typedef struct {
@@ -130,6 +134,7 @@ typedef struct {
     const char *ptr;
     strbuf_t *tmp;    /* Temporary storage for strings */
     json_config_t *cfg;
+    int current_depth;
 } json_parse_t;
 
 typedef struct {
@@ -234,46 +239,50 @@ static int json_cfg_encode_sparse_array(lua_State *l)
     return 3;
 }
 
+/* Process integer options for configuration functions */
+static int json_integer_option(lua_State *l, int *setting, int min, int max)
+{
+    char errmsg[64];
+    int value;
+
+    json_verify_arg_count(l, 1);
+
+    if (lua_gettop(l)) {
+        value = luaL_checkinteger(l, 1);
+        snprintf(errmsg, sizeof(errmsg), "expected integer between %d and %d", min, max);
+        luaL_argcheck(l, min <= value && value <= max, 1, errmsg);
+        *setting = value;
+    }
+
+    lua_pushinteger(l, *setting);
+
+    return 1;
+}
+
 /* Configures the maximum number of nested arrays/objects allowed when
  * encoding */
 static int json_cfg_encode_max_depth(lua_State *l)
 {
-    json_config_t *cfg;
-    int depth;
+    json_config_t *cfg = json_fetch_config(l);
 
-    json_verify_arg_count(l, 1);
-    cfg = json_fetch_config(l);
+    return json_integer_option(l, &cfg->encode_max_depth, 1, INT_MAX);
+}
 
-    if (lua_gettop(l)) {
-        depth = luaL_checkinteger(l, 1);
-        luaL_argcheck(l, depth > 0, 1, "expected positive integer");
-        cfg->encode_max_depth = depth;
-    }
+/* Configures the maximum number of nested arrays/objects allowed when
+ * encoding */
+static int json_cfg_decode_max_depth(lua_State *l)
+{
+    json_config_t *cfg = json_fetch_config(l);
 
-    lua_pushinteger(l, cfg->encode_max_depth);
-
-    return 1;
+    return json_integer_option(l, &cfg->decode_max_depth, 1, INT_MAX);
 }
 
 /* Configures number precision when converting doubles to text */
 static int json_cfg_encode_number_precision(lua_State *l)
 {
-    json_config_t *cfg;
-    int precision;
+    json_config_t *cfg = json_fetch_config(l);
 
-    json_verify_arg_count(l, 1);
-    cfg = json_fetch_config(l);
-
-    if (lua_gettop(l)) {
-        precision = luaL_checkinteger(l, 1);
-        luaL_argcheck(l, 1 <= precision && precision <= 14, 1,
-                      "expected integer between 1 and 14");
-        cfg->encode_number_precision = precision;
-    }
-
-    lua_pushinteger(l, cfg->encode_number_precision);
-
-    return 1;
+    return json_integer_option(l, &cfg->encode_number_precision, 1, 14);
 }
 
 /* Configures JSON encoding buffer persistence */
@@ -387,7 +396,8 @@ static void json_create_config(lua_State *l)
     cfg->encode_sparse_convert = DEFAULT_SPARSE_CONVERT;
     cfg->encode_sparse_ratio = DEFAULT_SPARSE_RATIO;
     cfg->encode_sparse_safe = DEFAULT_SPARSE_SAFE;
-    cfg->encode_max_depth = DEFAULT_MAX_DEPTH;
+    cfg->encode_max_depth = DEFAULT_ENCODE_MAX_DEPTH;
+    cfg->decode_max_depth = DEFAULT_DECODE_MAX_DEPTH;
     cfg->encode_refuse_badnum = DEFAULT_ENCODE_REFUSE_BADNUM;
     cfg->decode_refuse_badnum = DEFAULT_DECODE_REFUSE_BADNUM;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
@@ -1094,10 +1104,19 @@ static void json_throw_parse_error(lua_State *l, json_parse_t *json,
                exp, found, token->index + 1);
 }
 
-static void json_decode_checkstack(lua_State *l, json_parse_t *json, int n)
+static inline void json_decode_ascend(json_parse_t *json)
 {
-    if (lua_checkstack(l, n))
+    json->current_depth--;
+}
+
+static void json_decode_descend(lua_State *l, json_parse_t *json, int slots)
+{
+    json->current_depth++;
+
+    if (json->current_depth <= json->cfg->decode_max_depth &&
+        lua_checkstack(l, slots)) {
         return;
+    }
 
     strbuf_free(json->tmp);
     luaL_error(l, "Too many nested data structures");
@@ -1109,7 +1128,7 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 
     /* 3 slots required:
      * .., table, key, value */
-    json_decode_checkstack(l, json, 3);
+    json_decode_descend(l, json, 3);
 
     lua_newtable(l);
 
@@ -1117,6 +1136,7 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 
     /* Handle empty objects */
     if (token.type == T_OBJ_END) {
+        json_decode_ascend(json);
         return;
     }
 
@@ -1140,8 +1160,10 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 
         json_next_token(json, &token);
 
-        if (token.type == T_OBJ_END)
+        if (token.type == T_OBJ_END) {
+            json_decode_ascend(json);
             return;
+        }
 
         if (token.type != T_COMMA)
             json_throw_parse_error(l, json, "comma or object end", &token);
@@ -1158,15 +1180,17 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
     /* 2 slots required:
      * .., table, value */
-    json_decode_checkstack(l, json, 2);
+    json_decode_descend(l, json, 2);
 
     lua_newtable(l);
 
     json_next_token(json, &token);
 
     /* Handle empty arrays */
-    if (token.type == T_ARR_END)
+    if (token.type == T_ARR_END) {
+        json_decode_ascend(json);
         return;
+    }
 
     for (i = 1; ; i++) {
         json_process_value(l, json, &token);
@@ -1174,8 +1198,10 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
         json_next_token(json, &token);
 
-        if (token.type == T_ARR_END)
+        if (token.type == T_ARR_END) {
+            json_decode_ascend(json);
             return;
+        }
 
         if (token.type != T_COMMA)
             json_throw_parse_error(l, json, "comma or array end", &token);
@@ -1221,6 +1247,7 @@ static void lua_json_decode(lua_State *l, const char *json_text, int json_len)
     json_token_t token;
 
     json.cfg = json_fetch_config(l);
+    json.current_depth = 0;
     json.data = json_text;
     json.ptr = json.data;
 
@@ -1292,6 +1319,7 @@ static int lua_cjson_new(lua_State *l)
         { "decode", json_decode },
         { "encode_sparse_array", json_cfg_encode_sparse_array },
         { "encode_max_depth", json_cfg_encode_max_depth },
+        { "decode_max_depth", json_cfg_decode_max_depth },
         { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },

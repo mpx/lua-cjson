@@ -158,6 +158,7 @@ setting = cjson.refuse_invalid_numbers([setting])
 depth = cjson.encode_max_depth([depth])
 convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
 keep = cjson.encode_keep_buffer([keep])
+depth = cjson.decode_max_depth([depth])
 ------------
 
 
@@ -237,6 +238,31 @@ value = cjson.decode(json_text)
 Care must be taken when after decoding JSON objects with numeric keys. Each
 numeric key will be stored as a Lua +string+. Any code assuming type
 +number+ may break.
+
+
+[[decode_max_depth]]
+decode_max_depth
+~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+depth = cjson.decode_max_depth([depth])
+-- "depth" must be a positive integer
+------------
+
+By default, Lua CJSON will reject JSON with arrays and/or objects
+nested more than 20 deep.
+
+This setting is only changed when an argument is provided. The current
+setting is always returned.
+
+When the maximum array/object depth is exceeded Lua CJSON will throw
+an error. An error may be thrown before the depth limit is hit if Lua
+is unable to allocate more objects on the Lua stack.
+
+This check prevents unnecessarily complicated JSON from slowing down
+the application, or crashing the application due to lack of process
+stack space.
 
 
 encode
