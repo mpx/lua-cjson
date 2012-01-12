@@ -364,8 +364,8 @@ depth = cjson.encode_max_depth([depth])
 -- "depth" must be a positive integer
 ------------
 
-By default, Lua CJSON will reject data structure with more than 20 nested
-tables.
+By default, Lua CJSON will reject data structures with more than 20
+nested tables.
 
 This setting is only changed when an argument is provided. The current
 setting is always returned.
