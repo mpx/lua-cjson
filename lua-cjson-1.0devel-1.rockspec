@@ -35,6 +35,15 @@ build = {
             }
         }
     },
+    install = {
+        lua = {
+            ["cjson.util"] = "lua/cjson/util.lua"
+        },
+        bin = {
+            json2lua = "lua/json2lua.lua",
+            lua2json = "lua/lua2json.lua"
+        }
+    },
     -- Override default build options (per platform)
     platforms = {
         win32 = { modules = { cjson = { defines = {
