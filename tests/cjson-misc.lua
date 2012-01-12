@@ -1,6 +1,6 @@
 local json = require "cjson"
 
--- Misc routines to assist with CJSON testing
+-- Various common routines used by the Lua CJSON package
 --
 -- Mark Pulford <mark@kyne.com.au>
 
