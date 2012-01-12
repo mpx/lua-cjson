@@ -7,14 +7,14 @@
 -- ./lua2json.lua test.lua
 
 local json = require "cjson"
-local misc = require "cjson-misc"
+local util = require "cjson.util"
 
 local env = {
     json = { null = json.null },
     null = json.null
 }
 
-local t = misc.run_script("data = " .. misc.file_load(arg[1]), env)
+local t = util.run_script("data = " .. util.file_load(arg[1]), env)
 print(json.encode(t.data))
 
 -- vi:ai et sw=4 ts=4:

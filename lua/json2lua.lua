@@ -7,8 +7,8 @@
 -- ./json2lua.lua test.json
 
 local json = require "cjson"
-local misc = require "cjson-misc"
+local util = require "cjson.util"
 
-local json_text = misc.file_load(arg[1])
+local json_text = util.file_load(arg[1])
 local t = json.decode(json_text)
-print(misc.serialise_value(t))
+print(util.serialise_value(t))

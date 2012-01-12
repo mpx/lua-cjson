@@ -10,7 +10,7 @@ local json_module = os.getenv("JSON_MODULE") or "cjson"
 
 require "socket"
 local json = require(json_module)
-local misc = require "cjson-misc"
+local util = require "cjson.util"
 
 local function find_func(mod, funcnames)
     for _, v in ipairs(funcnames) do
@@ -68,7 +68,7 @@ function benchmark(tests, seconds, rep)
 end
 
 function bench_file(filename)
-    local data_json = misc.file_load(filename)
+    local data_json = util.file_load(filename)
     local data_obj = json_decode(data_json)
 
     local function test_encode()
@@ -86,9 +86,9 @@ function bench_file(filename)
 end
 
 -- Optionally load any custom configuration required for this module
-local success, data = pcall(misc.file_load, string.format("bench-%s.lua", json_module))
+local success, data = pcall(util.file_load, string.format("bench-%s.lua", json_module))
 if success then
-    misc.run_script(data, _G)
+    util.run_script(data, _G)
     configure(json)
 end
 
