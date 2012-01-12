@@ -117,8 +117,10 @@ USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing ++isinf++(3).
 DISABLE_CJSON_GLOBAL:: Do not store module table in global "cjson"
   variable. Redundant from Lua 5.2 onwards.
 DISABLE_INVALID_NUMBERS:: Recommended on platforms where ++strtod++(3) /
-  ++sprintf++(3) are not POSIX compliant (Eg, Windows MinGW). Restricts
-  the +cjson.refuse_invalid_numbers+ runtime configuration to +true+.
+  ++sprintf++(3) are not POSIX compliant (Eg, Windows MinGW). Prevents
+  +cjson.encode_invalid_numbers+ and +cjson.decode_invalid_numbers+
+  from being enabled. However, +cjson.encode_invalid_numbers+ may be
+  set to +"null"+.
 
 
 Built-in dtoa() support
@@ -154,11 +156,12 @@ text = cjson.encode(value)
 value = cjson.decode(text)
  
 -- Get and/or set Lua CJSON configuration
-setting = cjson.refuse_invalid_numbers([setting])
+setting = cjson.decode_invalid_numbers([setting])
+setting = cjson.encode_invalid_numbers([setting])
 depth = cjson.encode_max_depth([depth])
+depth = cjson.decode_max_depth([depth])
 convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
 keep = cjson.encode_keep_buffer([keep])
-depth = cjson.decode_max_depth([depth])
 ------------
 
 
@@ -226,7 +229,7 @@ can be compared with +cjson.null+ for convenience.
 
 By default, numbers incompatible with the JSON specification (NaN,
 Infinity, Hexadecimal) can be decoded. This default can be changed
-with +cjson.refuse_invalid_numbers+.
+with +cjson.decode_invalid_numbers+.
 
 .Example: Decoding
 [source,lua]
@@ -238,6 +241,30 @@ value = cjson.decode(json_text)
 Care must be taken when after decoding JSON objects with numeric keys. Each
 numeric key will be stored as a Lua +string+. Any code assuming type
 +number+ may break.
+
+
+[[decode_invalid_numbers]]
+decode_invalid_numbers
+~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+setting = cjson.decode_invalid_numbers([setting])
+-- "setting" must be on of:
+--       "off", "on", false, true
+------------
+
+Lua CJSON can throw an error when trying to parse numbers outside of
+the JSON specification (_invalid numbers_):
+
+- Infinity
+- Not-a-number (NaN)
+- Hexadecimal
+
+By default Lua CJSON will decode _invalid numbers_.
+
+This setting is only changed when an argument is provided. The current
+setting is always returned.
 
 
 [[decode_max_depth]]
@@ -352,13 +379,37 @@ These defaults can be changed with:
 
 - <<encode_max_depth,+cjson.encode_max_depth+>>
 - <<encode_sparse_array,+cjson.encode_sparse_array+>>
-- <<refuse_invalid_numbers,+cjson.refuse_invalid_numbers+>>
+- <<encode_invalid_numbers,+cjson.encode_invalid_numbers+>>
 
 .Example: Encoding
 [source,lua]
 value = { true, { foo = "bar" } }
 json_text = cjson.encode(value)
 -- Returns: '[true,{"foo":"bar"}]'
+
+
+[[encode_invalid_numbers]]
+encode_invalid_numbers
+~~~~~~~~~~~~~~~~~~~~~~
+[source,lua]
+------------
+setting = cjson.encode_invalid_numbers([setting])
+-- "setting" must be on of:
+--       "off", "on", "null", false, true
+------------
+
+By default, Lua CJSON will throw an error when trying to encode
+numbers outside of the JSON specification (_invalid numbers_):
+
+- Infinity
+- Not-a-number (NaN)
+
+When set to +"null"+, Lua CJSON will encode _invalid numbers_ as a
+JSON +null+ value. This allows Infinity and NaN to be represented as
+valid JSON.
+
+This setting is only changed when an argument is provided. The current
+setting is always returned.
 
 
 encode_keep_buffer
@@ -471,39 +522,6 @@ arrays will be converted to a JSON object:
 cjson.encode_sparse_array(true)
 cjson.encode({ [1000] = "excessively sparse" })
 -- Returns: '{"1000":"excessively sparse"}'
-
-
-[[refuse_invalid_numbers]]
-refuse_invalid_numbers
-~~~~~~~~~~~~~~~~~~~~~~
-
-[source,lua]
-------------
-setting = cjson.refuse_invalid_numbers([setting])
--- "setting" must be on of:
---       false, "encode", "decode", "both", true
-------------
-
-Lua CJSON can throw an error for numbers outside of the JSON
-specification (_invalid numbers_):
-
-- Infinity
-- NaN
-- Hexadecimal
-
-By default Lua CJSON will decode _invalid numbers_, but will refuse to
-encode them.
-
-This setting is only changed when an argument is provided. The current
-setting is always returned.
-
-This setting can be configured separately for encoding and/or
-decoding:
-
-[horizontal]
-Enabled:: An error will be generated if an _invalid number_ is found.
-Disabled for encoding:: NaN and Infinity can be encoded.
-Disabled for decoding:: All numbers supported by +strtod+(3) will be parsed.
 
 
 API (Variables)

@@ -138,22 +138,28 @@ local encode_error_tests = {
     { json.encode, { function () end },
       false, { "Cannot serialise function: type not supported" } },
     function ()
-        json.refuse_invalid_numbers("encode")
-        return 'Setting refuse_invalid_numbers("encode")'
+        json.encode_invalid_numbers(false)
+        return 'Setting encode_invalid_numbers(false)'
     end,
     { json.encode, { NaN },
       false, { "Cannot serialise number: must not be NaN or Inf" } },
     { json.encode, { Inf },
       false, { "Cannot serialise number: must not be NaN or Inf" } },
     function ()
-        json.refuse_invalid_numbers(false)
-        return 'Setting refuse_invalid_numbers(false).'
+        json.encode_invalid_numbers("null")
+        return 'Setting encode_invalid_numbers("null").'
+    end,
+    { json.encode, { NaN }, true, { "null" } },
+    { json.encode, { Inf }, true, { "null" } },
+    function ()
+        json.encode_invalid_numbers(true)
+        return 'Setting encode_invalid_numbers(true).'
     end,
     { json.encode, { NaN }, true, { "nan" } },
     { json.encode, { Inf }, true, { "inf" } },
     function ()
-        json.refuse_invalid_numbers("encode")
-        return 'Setting refuse_invalid_numbers("encode")'
+        json.encode_invalid_numbers(false)
+        return 'Setting encode_invalid_numbers(false)'
     end,
 }
 
@@ -233,7 +239,8 @@ util.run_test_group("encode error", encode_error_tests)
 util.run_test_group("escape", escape_tests)
 util.run_test_group("locale", locale_tests)
 
-json.refuse_invalid_numbers(false)
+json.encode_invalid_numbers(true)
+json.decode_invalid_numbers(true)
 json.encode_max_depth(20)
 for i = 1, #arg do
     util.run_test("decode cycle " .. arg[i], test_decode_cycle, { arg[i] },

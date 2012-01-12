@@ -64,14 +64,14 @@
 #define DEFAULT_SPARSE_SAFE 10
 #define DEFAULT_ENCODE_MAX_DEPTH 20
 #define DEFAULT_DECODE_MAX_DEPTH 20
-#define DEFAULT_ENCODE_REFUSE_BADNUM 1
-#define DEFAULT_DECODE_REFUSE_BADNUM 0
+#define DEFAULT_ENCODE_INVALID_NUMBERS 0
+#define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
 
 #ifdef DISABLE_INVALID_NUMBERS
-#undef DEFAULT_DECODE_REFUSE_BADNUM
-#define DEFAULT_DECODE_REFUSE_BADNUM 1
+#undef DEFAULT_DECODE_INVALID_NUMBERS
+#define DEFAULT_DECODE_INVALID_NUMBERS 0
 #endif
 
 typedef enum {
@@ -121,11 +121,11 @@ typedef struct {
     int encode_sparse_ratio;
     int encode_sparse_safe;
     int encode_max_depth;
-    int encode_refuse_badnum;
+    int encode_invalid_numbers;     /* 2 => Encode as "null" */
     int encode_number_precision;
     int encode_keep_buffer;
 
-    int decode_refuse_badnum;
+    int decode_invalid_numbers;
     int decode_max_depth;
 } json_config_t;
 
@@ -259,6 +259,29 @@ static int json_integer_option(lua_State *l, int *setting, int min, int max)
     return 1;
 }
 
+/* Process enumerated arguments for a configuration function */
+static int json_enum_option(lua_State *l, int *setting,
+                            const char **options, int bool_value)
+{
+    static const char *bool_options[] = { "off", "on", NULL };
+
+    if (!options) {
+        options = bool_options;
+        bool_value = 1;
+    }
+
+    if (lua_gettop(l)) {
+        if (lua_isboolean(l, 1))
+            *setting = lua_toboolean(l, 1) * bool_value;
+        else
+            *setting = luaL_checkoption(l, 1, NULL, options);
+    }
+
+    lua_pushstring(l, options[*setting]);
+
+    return 1;
+}
+
 /* Configures the maximum number of nested arrays/objects allowed when
  * encoding */
 static int json_cfg_encode_max_depth(lua_State *l)
@@ -288,18 +311,12 @@ static int json_cfg_encode_number_precision(lua_State *l)
 /* Configures JSON encoding buffer persistence */
 static int json_cfg_encode_keep_buffer(lua_State *l)
 {
-    json_config_t *cfg;
+    json_config_t *cfg = json_fetch_config(l);
     int old_value;
-
-    json_verify_arg_count(l, 1);
-    cfg = json_fetch_config(l);
 
     old_value = cfg->encode_keep_buffer;
 
-    if (lua_gettop(l)) {
-        luaL_checktype(l, 1, LUA_TBOOLEAN);
-        cfg->encode_keep_buffer = lua_toboolean(l, 1);
-    }
+    json_enum_option(l, &cfg->encode_keep_buffer, NULL, 1);
 
     /* Init / free the buffer if the setting has changed */
     if (old_value ^ cfg->encode_keep_buffer) {
@@ -309,61 +326,75 @@ static int json_cfg_encode_keep_buffer(lua_State *l)
             strbuf_free(&cfg->encode_buf);
     }
 
-    lua_pushboolean(l, cfg->encode_keep_buffer);
+    return 1;
+}
+
+static int json_cfg_encode_invalid_numbers(lua_State *l)
+{
+    static const char *options[] = { "off", "on", "null", NULL };
+    json_config_t *cfg = json_fetch_config(l);
+
+    json_enum_option(l, &cfg->encode_invalid_numbers, options, 1);
+
+#if DISABLE_INVALID_NUMBERS
+    if (cfg->encode_invalid_numbers == 1) {
+        cfg->encode_invalid_numbers = 0;
+        luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
+    }
+#endif
 
     return 1;
 }
 
-/* On argument: decode enum and set config variables
- * **options must point to a NULL terminated array of 4 enums
- * Returns: current enum value */
-static void json_enum_option(lua_State *l, const char **options,
-                             int *opt1, int *opt2)
+static int json_cfg_decode_invalid_numbers(lua_State *l)
 {
-    int setting;
+    json_config_t *cfg = json_fetch_config(l);
 
-    if (lua_gettop(l)) {
-        if (lua_isboolean(l, 1))
-            setting = lua_toboolean(l, 1) * 3;
-        else
-            setting = luaL_checkoption(l, 1, NULL, options);
-
-        *opt1 = setting & 1 ? 1 : 0;
-        *opt2 = setting & 2 ? 1 : 0;
-    } else {
-        setting = *opt1 | (*opt2 << 1);
-    }
-
-    if (setting)
-        lua_pushstring(l, options[setting]);
-    else
-        lua_pushboolean(l, 0);
-}
-
-
-/* When enabled, rejects: NaN, Infinity, hexadecimal numbers */
-static int json_cfg_refuse_invalid_numbers(lua_State *l)
-{
-    static const char *options_enc_dec[] = { "none", "encode", "decode",
-                                             "both", NULL };
-    json_config_t *cfg;
-
-    json_verify_arg_count(l, 1);
-    cfg = json_fetch_config(l);
-
-    json_enum_option(l, options_enc_dec,
-                     &cfg->encode_refuse_badnum,
-                     &cfg->decode_refuse_badnum);
+    json_enum_option(l, &cfg->decode_invalid_numbers, NULL, 1);
 
 #if DISABLE_INVALID_NUMBERS
-    /* Some non-POSIX platforms don't handle double <-> string translations
-     * for Infinity/NaN/hexadecimal properly. Throw an error if the
-     * user attempts to enable them. */
-    if (!cfg->encode_refuse_badnum || !cfg->decode_refuse_badnum) {
-        cfg->encode_refuse_badnum = cfg->decode_refuse_badnum = 1;
+    if (cfg->decode_invalid_numbers) {
+        cfg->decode_invalid_numbers = 0;
         luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
     }
 #endif
+
+    return 1;
+}
+
+/* When enabled, rejects: NaN, Infinity, hexadecimal numbers.
+ *
+ * This function has been deprecated and may be removed in future. */
+static int json_cfg_refuse_invalid_numbers(lua_State *l)
+{
+    static const char *options[] = { "none", "encode", "decode", "both", NULL };
+    json_config_t *cfg = json_fetch_config(l);
+    int have_arg, setting;
+
+    have_arg = lua_gettop(l);
+
+    /* Map config variables to options list index */
+    setting = !cfg->encode_invalid_numbers +            /* bit 0 */
+              (!cfg->decode_invalid_numbers << 1);      /* bit 1 */
+
+    json_enum_option(l, &setting, options, 3);
+
+    /* Map options list index to config variables
+     *
+     * Only update the config variables when an argument has been provided.
+     * Otherwise a "null" encoding setting may inadvertently be disabled. */
+    if (have_arg) {
+        cfg->encode_invalid_numbers = !(setting & 1);
+        cfg->decode_invalid_numbers = !(setting & 2);
+
+#if DISABLE_INVALID_NUMBERS
+        if (cfg->encode_invalid_numbers || cfg->decode_invalid_numbers) {
+            cfg->encode_invalid_numbers = cfg->decode_invalid_numbers = 0;
+            luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
+        }
+#endif
+
+    }
 
     return 1;
 }
@@ -398,8 +429,8 @@ static void json_create_config(lua_State *l)
     cfg->encode_sparse_safe = DEFAULT_SPARSE_SAFE;
     cfg->encode_max_depth = DEFAULT_ENCODE_MAX_DEPTH;
     cfg->decode_max_depth = DEFAULT_DECODE_MAX_DEPTH;
-    cfg->encode_refuse_badnum = DEFAULT_ENCODE_REFUSE_BADNUM;
-    cfg->decode_refuse_badnum = DEFAULT_DECODE_REFUSE_BADNUM;
+    cfg->encode_invalid_numbers = DEFAULT_ENCODE_INVALID_NUMBERS;
+    cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
 
@@ -589,17 +620,28 @@ static void json_append_number(lua_State *l, json_config_t *cfg,
     double num = lua_tonumber(l, lindex);
     int len;
 
-    if (cfg->encode_refuse_badnum && (isinf(num) || isnan(num)))
-        json_encode_exception(l, cfg, json, lindex, "must not be NaN or Inf");
-
-    if (isnan(num)) {
-        /* Some platforms may print -nan, just hard code it */
-        strbuf_append_mem(json, "nan", 3);
+    if (cfg->encode_invalid_numbers == 0) {
+        /* Prevent encoding invalid numbers */
+        if (isinf(num) || isnan(num))
+            json_encode_exception(l, cfg, json, lindex, "must not be NaN or Inf");
+    } else if (cfg->encode_invalid_numbers == 1) {
+        /* Encode invalid numbers, but handle "nan" separately
+         * since some platforms may encode as "-nan". */
+        if (isnan(num)) {
+            strbuf_append_mem(json, "nan", 3);
+            return;
+        }
     } else {
-        strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE);
-        len = fpconv_g_fmt(strbuf_empty_ptr(json), num, cfg->encode_number_precision);
-        strbuf_extend_length(json, len);
+        /* Encode invalid numbers as "null" */
+        if (isinf(num) || isnan(num)) {
+            strbuf_append_mem(json, "null", 4);
+            return;
+        }
     }
+
+    strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE);
+    len = fpconv_g_fmt(strbuf_empty_ptr(json), num, cfg->encode_number_precision);
+    strbuf_extend_length(json, len);
 }
 
 static void json_append_object(lua_State *l, json_config_t *cfg,
@@ -1046,7 +1088,7 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         json_next_string_token(json, token);
         return;
     } else if (ch == '-' || ('0' <= ch && ch <= '9')) {
-        if (json->cfg->decode_refuse_badnum && json_is_invalid_number(json)) {
+        if (!json->cfg->decode_invalid_numbers && json_is_invalid_number(json)) {
             json_set_token_error(token, json, "invalid number");
             return;
         }
@@ -1066,9 +1108,9 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
         token->type = T_NULL;
         json->ptr += 4;
         return;
-    } else if (!json->cfg->decode_refuse_badnum &&
+    } else if (json->cfg->decode_invalid_numbers &&
                json_is_invalid_number(json)) {
-        /* When refuse_badnum is disabled, only attempt to process
+        /* When decode_invalid_numbers is enabled, only attempt to process
          * numbers we know are invalid JSON (Inf, NaN, hex)
          * This is required to generate an appropriate token error,
          * otherwise all bad tokens will register as "invalid number"
@@ -1322,6 +1364,8 @@ static int lua_cjson_new(lua_State *l)
         { "decode_max_depth", json_cfg_decode_max_depth },
         { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
+        { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
+        { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
         { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
         { "new", lua_cjson_new },
         { NULL, NULL }
