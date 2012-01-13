@@ -1,6 +1,6 @@
 #!/usr/bin/env lua
 
--- CJSON tests
+-- Lua CJSON tests
 --
 -- Mark Pulford <mark@kyne.com.au>
 --
@@ -163,8 +163,6 @@ local encode_error_tests = {
     end,
 }
 
-local json_nested = string.rep("[", 100000) .. string.rep("]", 100000)
-
 local decode_error_tests = {
     { json.decode, { '\0"\0"' },
       false, { "JSON parser does not support UTF-16 or UTF-32" } },
@@ -186,8 +184,18 @@ local decode_error_tests = {
       false, { "Expected value but found invalid number at character 1" } },
     { json.decode, { '[ 0.4eg10 ]' },
       false, { "Expected comma or array end but found invalid token at character 6" } },
-    { json.decode, { json_nested },
-      false, { "Too many nested data structures" } }
+    function ()
+        json.decode_max_depth(5)
+        return "Setting decode_max_depth(5)"
+    end,
+    { json.decode, { '[[[[[ "nested" ]]]]]' },
+      true, { {{{{{ "nested" }}}}} } },
+    { json.decode, { '[[[[[[ "nested" ]]]]]]' },
+      false, { "Too many nested data structures" } },
+    function ()
+        json.decode_max_depth(1000)
+        return "Setting decode_max_depth(1000)"
+    end
 }
 
 local escape_tests = {
