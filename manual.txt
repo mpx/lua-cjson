@@ -200,9 +200,9 @@ conversion as they are usually well supported, fast and bug free.
 However, these functions require a workaround for JSON
 encoding/parsing under locales using a comma decimal separator. Lua
 CJSON detects the current locale during instantiation to determine
-whether a workaround is required. CJSON should be reinitialised via
-+cjson.new+ if the locale of the current process changes. Different
-locales per thread are not supported.
+whether a workaround is required. Lua CJSON should be reinitialised
+via +cjson.new+ if the locale of the current process changes.
+Different locales per thread are not supported.
 
 
 decode
