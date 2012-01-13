@@ -201,7 +201,7 @@ local function run_test(testname, func, input, should_work, output)
     test_count_total = test_count_total + 1
 
     local teststatus = { [true] = "PASS", [false] = "FAIL" }
-    print(string.format("==> Test[%d] / %s: %s",
+    print(string.format("==> Test [%d] %s: %s",
         test_count_total, testname, teststatus[correct]))
 
     status_line("Input", nil, input)
@@ -214,27 +214,22 @@ local function run_test(testname, func, input, should_work, output)
     return correct, result
 end
 
-local function run_test_group(testgroup, tests)
-    local function run_config(configname, func)
-        local success, msg = pcall(func)
-        if msg then
-            print(string.format("==> Config %s: %s", configname, msg))
+local function run_test_group(tests)
+    local function run_helper(name, func, input)
+        if type(name) == "string" and #name > 0 then
+            print("==> " .. name)
         end
+        -- Not a protected call, these functions should never generate errors.
+        func(unpack(input or {}))
         print()
     end
 
-    local function test_id(group, id)
-        return string.format("%s[%d]", group, id)
-    end
-
-    for k, v in ipairs(tests) do
-        if type(v) == "function" then
-            -- Useful for changing configuration during a batch
-            run_config(test_id(testgroup, k), v)
-        elseif type(v) == "table" then
-            run_test(test_id(testgroup, k), unpack(v))
+    for _, v in ipairs(tests) do
+        -- Run the helper if "should_work" is missing
+        if v[4] == nil then
+            run_helper(unpack(v))
         else
-            error("Testgroup can only contain functions and tables")
+            run_test(unpack(v))
         end
     end
 end
