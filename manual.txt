@@ -278,7 +278,7 @@ depth = cjson.decode_max_depth([depth])
 ------------
 
 By default, Lua CJSON will reject JSON with arrays and/or objects
-nested more than 20 deep.
+nested more than 1000 deep.
 
 This setting is only changed when an argument is provided. The current
 setting is always returned.
@@ -372,7 +372,7 @@ This may not be required by some applications.
 By default, the following Lua values will generate errors:
 
 - Numbers incompatible with the JSON specification (NaN, Infinity, Hexadecimal)
-- Tables nested more than 20 levels deep
+- Tables nested more than 1000 levels deep
 - Excessively sparse Lua arrays
 
 These defaults can be changed with:
@@ -441,7 +441,7 @@ depth = cjson.encode_max_depth([depth])
 -- "depth" must be a positive integer
 ------------
 
-By default, Lua CJSON will reject data structures with more than 20
+By default, Lua CJSON will reject data structures with more than 1000
 nested tables.
 
 This setting is only changed when an argument is provided. The current
