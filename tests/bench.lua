@@ -1,6 +1,7 @@
 #!/usr/bin/env lua
 
--- Simple JSON benchmark.
+-- This benchmark script measures wall clock time and should be
+-- run on an unloaded system.
 --
 -- Your Mileage May Vary.
 --
@@ -25,24 +26,44 @@ end
 local json_encode = find_func(json, { "encode", "Encode", "to_string", "stringify", "json" })
 local json_decode = find_func(json, { "decode", "Decode", "to_value", "parse" })
 
+local function average(t)
+    local total = 0
+    for _, v in ipairs(t) do
+        total = total + v
+    end
+    return total / #t
+end
+
 function benchmark(tests, seconds, rep)
     local function bench(func, iter)
-        -- collectgarbage("stop")
-        collectgarbage("collect")
+        -- Use socket.gettime() to measure microsecond resolution
+        -- wall clock time.
         local t = socket.gettime()
         for i = 1, iter do
             func(i)
         end
         t = socket.gettime() - t
-        -- collectgarbage("restart")
+
+        -- Don't trust any results when the run lasted for less than a
+        -- millisecond - return nil.
+        if t < 0.001 then
+            return nil
+        end
+
         return (iter / t)
     end
 
     -- Roughly calculate the number of interations required
     -- to obtain a particular time period.
     local function calc_iter(func, seconds)
-        local base_iter = 10
-        local rate = (bench(func, base_iter) + bench(func, base_iter)) / 2
+        local iter = 1
+        local rate
+        -- Warm up the bench function first.
+        func()
+        while not rate do
+            rate = bench(func, iter)
+            iter = iter * 10
+        end
         return math.ceil(seconds * rate)
     end
 
@@ -55,13 +76,21 @@ function benchmark(tests, seconds, rep)
             name = func
             func = _G[name]
         end
+
         local iter = calc_iter(func, seconds)
+
         local result = {}
         for i = 1, rep do
             result[i] = bench(func, iter)
         end
+
+        -- Remove the slowest half (round down) of the result set
         table.sort(result)
-        test_results[name] = result[rep]
+        for i = 1, math.floor(#result / 2) do
+            table.remove(result, 1)
+        end
+
+        test_results[name] = average(result)
     end
 
     return test_results
