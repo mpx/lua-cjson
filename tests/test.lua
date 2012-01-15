@@ -47,6 +47,31 @@ local function gen_utf16_escaped()
     return table.concat(utf16_escaped)
 end
 
+function load_testdata()
+    local data = {}
+
+    -- Data for 8bit raw <-> escaped octets tests
+    data.octets_raw = gen_raw_octets()
+    data.octets_escaped = util.file_load("octets-escaped.dat")
+
+    -- Data for \uXXXX -> UTF-8 test
+    data.utf16_escaped = gen_utf16_escaped()
+
+    -- Load matching data for utf16_escaped
+    local utf8_loaded
+    utf8_loaded, data.utf8_raw = pcall(util.file_load, "utf8.dat")
+    if not utf8_loaded then
+        data.utf8_raw = "Failed to load utf8.dat"
+    end
+
+    data.nested5 = {{{{{ "nested" }}}}}
+
+    data.table_cycle = {}
+    data.table_cycle[1] = data.table_cycle
+
+    return data
+end
+
 function test_decode_cycle(filename)
     local obj1 = json.decode(util.file_load(filename))
     local obj2 = json.decode(json.encode(obj1))
@@ -57,20 +82,7 @@ end
 local Inf = math.huge;
 local NaN = math.huge * 0;
 
-local octets_raw = gen_raw_octets()
-local octets_escaped = util.file_load("octets-escaped.dat")
-
-local utf8_loaded, utf8_raw = pcall(util.file_load, "utf8.dat")
-if not utf8_loaded then
-    utf8_raw = "Failed to load utf8.dat"
-end
-local utf16_escaped = gen_utf16_escaped()
-
-local nested5 = {{{{{ "nested" }}}}}
-
-local table_cycle = {}
-local table_cycle2 = { table_cycle }
-table_cycle[1] = table_cycle2
+local testdata = load_testdata()
 
 local all_tests = {
     -- Simple decode tests
@@ -207,12 +219,12 @@ local all_tests = {
       true, { '{"2":"numeric string key test"}' } },
 
     { "Encode nested table",
-      json.encode, { nested5 }, true, { '[[[[["nested"]]]]]' } },
+      json.encode, { testdata.nested5 }, true, { '[[[[["nested"]]]]]' } },
     { "Encode nested table (throw error)",
-      json.encode, { { nested5 } },
+      json.encode, { { testdata.nested5 } },
       false, { "Cannot serialise, excessive nesting (6)" } },
     { "Encode table with cycle",
-      json.encode, { table_cycle },
+      json.encode, { testdata.table_cycle },
       false, { "Cannot serialise, excessive nesting (6)" } },
 
     -- Encode error tests
@@ -251,9 +263,9 @@ local all_tests = {
 
     -- Escaping tests
     { "Encode all octets (8-bit clean)",
-      json.encode, { octets_raw }, true, { octets_escaped } },
+      json.encode, { testdata.octets_raw }, true, { testdata.octets_escaped } },
     { "Decode all escaped octets",
-      json.decode, { octets_escaped }, true, { octets_raw } },
+      json.decode, { testdata.octets_escaped }, true, { testdata.octets_raw } },
     { "Decode single UTF-16 escape",
       json.decode, { [["\uF800"]] }, true, { "\239\160\128" } },
     { "Decode swapped surrogate pair",
@@ -272,7 +284,7 @@ local all_tests = {
       json.decode, { [["\uDB00\uD"]] },
       false, { "Expected value but found invalid unicode escape code at character 2" } },
     { "Decode all UTF-16 escapes (including surrogate combinations)",
-      json.decode, { utf16_escaped }, true, { utf8_raw } },
+      json.decode, { testdata.utf16_escaped }, true, { testdata.utf8_raw } },
 
     -- Locale tests
     --
