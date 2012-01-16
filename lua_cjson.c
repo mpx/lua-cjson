@@ -200,55 +200,29 @@ static json_config_t *json_fetch_config(lua_State *l)
     return cfg;
 }
 
-static void json_verify_arg_count(lua_State *l, int args)
+/* Ensure the correct number of arguments have been provided.
+ * Pad with nil to allow other functions to simply check arg[i]
+ * to find whether an argument was provided */
+static json_config_t *json_arg_init(lua_State *l, int args)
 {
     luaL_argcheck(l, lua_gettop(l) <= args, args + 1,
                   "found too many arguments");
-}
 
-/* Configures handling of extremely sparse arrays:
- * convert: Convert extremely sparse arrays into objects? Otherwise error.
- * ratio: 0: always allow sparse; 1: never allow sparse; >1: use ratio
- * safe: Always use an array when the max index <= safe */
-static int json_cfg_encode_sparse_array(lua_State *l)
-{
-    json_config_t *cfg;
-    int val;
+    while (lua_gettop(l) < args)
+        lua_pushnil(l);
 
-    json_verify_arg_count(l, 3);
-    cfg = json_fetch_config(l);
-
-    switch (lua_gettop(l)) {
-    case 3:
-        val = luaL_checkinteger(l, 3);
-        luaL_argcheck(l, val >= 0, 3, "expected integer >= 0");
-        cfg->encode_sparse_safe = val;
-    case 2:
-        val = luaL_checkinteger(l, 2);
-        luaL_argcheck(l, val >= 0, 2, "expected integer >= 0");
-        cfg->encode_sparse_ratio = val;
-    case 1:
-        luaL_argcheck(l, lua_isboolean(l, 1), 1, "expected boolean");
-        cfg->encode_sparse_convert = lua_toboolean(l, 1);
-    }
-
-    lua_pushboolean(l, cfg->encode_sparse_convert);
-    lua_pushinteger(l, cfg->encode_sparse_ratio);
-    lua_pushinteger(l, cfg->encode_sparse_safe);
-
-    return 3;
+    return json_fetch_config(l);
 }
 
 /* Process integer options for configuration functions */
-static int json_integer_option(lua_State *l, int *setting, int min, int max)
+static int json_integer_option(lua_State *l, int optindex, int *setting,
+                               int min, int max)
 {
     char errmsg[64];
     int value;
 
-    json_verify_arg_count(l, 1);
-
-    if (lua_gettop(l)) {
-        value = luaL_checkinteger(l, 1);
+    if (!lua_isnil(l, optindex)) {
+        value = luaL_checkinteger(l, optindex);
         snprintf(errmsg, sizeof(errmsg), "expected integer between %d and %d", min, max);
         luaL_argcheck(l, min <= value && value <= max, 1, errmsg);
         *setting = value;
@@ -260,7 +234,7 @@ static int json_integer_option(lua_State *l, int *setting, int min, int max)
 }
 
 /* Process enumerated arguments for a configuration function */
-static int json_enum_option(lua_State *l, int *setting,
+static int json_enum_option(lua_State *l, int optindex, int *setting,
                             const char **options, int bool_value)
 {
     static const char *bool_options[] = { "off", "on", NULL };
@@ -270,11 +244,11 @@ static int json_enum_option(lua_State *l, int *setting,
         bool_value = 1;
     }
 
-    if (lua_gettop(l)) {
-        if (lua_isboolean(l, 1))
-            *setting = lua_toboolean(l, 1) * bool_value;
+    if (!lua_isnil(l, optindex)) {
+        if (lua_isboolean(l, optindex))
+            *setting = lua_toboolean(l, optindex) * bool_value;
         else
-            *setting = luaL_checkoption(l, 1, NULL, options);
+            *setting = luaL_checkoption(l, optindex, NULL, options);
     }
 
     lua_pushstring(l, options[*setting]);
@@ -282,41 +256,56 @@ static int json_enum_option(lua_State *l, int *setting,
     return 1;
 }
 
+/* Configures handling of extremely sparse arrays:
+ * convert: Convert extremely sparse arrays into objects? Otherwise error.
+ * ratio: 0: always allow sparse; 1: never allow sparse; >1: use ratio
+ * safe: Always use an array when the max index <= safe */
+static int json_cfg_encode_sparse_array(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 3);
+
+    json_enum_option(l, 1, &cfg->encode_sparse_convert, NULL, 1);
+    json_integer_option(l, 2, &cfg->encode_sparse_ratio, 0, INT_MAX);
+    json_integer_option(l, 3, &cfg->encode_sparse_safe, 0, INT_MAX);
+
+    return 3;
+}
+
 /* Configures the maximum number of nested arrays/objects allowed when
  * encoding */
 static int json_cfg_encode_max_depth(lua_State *l)
 {
-    json_config_t *cfg = json_fetch_config(l);
+    json_config_t *cfg = json_arg_init(l, 1);
 
-    return json_integer_option(l, &cfg->encode_max_depth, 1, INT_MAX);
+    return json_integer_option(l, 1, &cfg->encode_max_depth, 1, INT_MAX);
 }
 
 /* Configures the maximum number of nested arrays/objects allowed when
  * encoding */
 static int json_cfg_decode_max_depth(lua_State *l)
 {
-    json_config_t *cfg = json_fetch_config(l);
+    json_config_t *cfg = json_arg_init(l, 1);
 
-    return json_integer_option(l, &cfg->decode_max_depth, 1, INT_MAX);
+    return json_integer_option(l, 1, &cfg->decode_max_depth, 1, INT_MAX);
 }
 
 /* Configures number precision when converting doubles to text */
 static int json_cfg_encode_number_precision(lua_State *l)
 {
-    json_config_t *cfg = json_fetch_config(l);
+    json_config_t *cfg = json_arg_init(l, 1);
 
-    return json_integer_option(l, &cfg->encode_number_precision, 1, 14);
+    return json_integer_option(l, 1, &cfg->encode_number_precision, 1, 14);
 }
 
 /* Configures JSON encoding buffer persistence */
 static int json_cfg_encode_keep_buffer(lua_State *l)
 {
-    json_config_t *cfg = json_fetch_config(l);
+    json_config_t *cfg = json_arg_init(l, 1);
     int old_value;
 
     old_value = cfg->encode_keep_buffer;
 
-    json_enum_option(l, &cfg->encode_keep_buffer, NULL, 1);
+    json_enum_option(l, 1, &cfg->encode_keep_buffer, NULL, 1);
 
     /* Init / free the buffer if the setting has changed */
     if (old_value ^ cfg->encode_keep_buffer) {
@@ -332,9 +321,9 @@ static int json_cfg_encode_keep_buffer(lua_State *l)
 static int json_cfg_encode_invalid_numbers(lua_State *l)
 {
     static const char *options[] = { "off", "on", "null", NULL };
-    json_config_t *cfg = json_fetch_config(l);
+    json_config_t *cfg = json_arg_init(l, 1);
 
-    json_enum_option(l, &cfg->encode_invalid_numbers, options, 1);
+    json_enum_option(l, 1, &cfg->encode_invalid_numbers, options, 1);
 
 #if DISABLE_INVALID_NUMBERS
     if (cfg->encode_invalid_numbers == 1) {
@@ -348,9 +337,9 @@ static int json_cfg_encode_invalid_numbers(lua_State *l)
 
 static int json_cfg_decode_invalid_numbers(lua_State *l)
 {
-    json_config_t *cfg = json_fetch_config(l);
+    json_config_t *cfg = json_arg_init(l, 1);
 
-    json_enum_option(l, &cfg->decode_invalid_numbers, NULL, 1);
+    json_enum_option(l, 1, &cfg->decode_invalid_numbers, NULL, 1);
 
 #if DISABLE_INVALID_NUMBERS
     if (cfg->decode_invalid_numbers) {
@@ -368,22 +357,20 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
 static int json_cfg_refuse_invalid_numbers(lua_State *l)
 {
     static const char *options[] = { "none", "encode", "decode", "both", NULL };
-    json_config_t *cfg = json_fetch_config(l);
-    int have_arg, setting;
-
-    have_arg = lua_gettop(l);
+    json_config_t *cfg = json_arg_init(l, 1);
+    int setting;
 
     /* Map config variables to options list index */
     setting = !cfg->encode_invalid_numbers +            /* bit 0 */
               (!cfg->decode_invalid_numbers << 1);      /* bit 1 */
 
-    json_enum_option(l, &setting, options, 3);
+    json_enum_option(l, 1, &setting, options, 3);
 
     /* Map options list index to config variables
      *
      * Only update the config variables when an argument has been provided.
      * Otherwise a "null" encoding setting may inadvertently be disabled. */
-    if (have_arg) {
+    if (!lua_isnil(l, 1)) {
         cfg->encode_invalid_numbers = !(setting & 1);
         cfg->decode_invalid_numbers = !(setting & 2);
 
