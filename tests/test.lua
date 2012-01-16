@@ -64,8 +64,6 @@ function load_testdata()
         data.utf8_raw = "Failed to load utf8.dat"
     end
 
-    data.nested5 = {{{{{ "nested" }}}}}
-
     data.table_cycle = {}
     data.table_cycle[1] = data.table_cycle
 
@@ -219,9 +217,9 @@ local all_tests = {
       true, { '{"2":"numeric string key test"}' } },
 
     { "Encode nested table",
-      json.encode, { testdata.nested5 }, true, { '[[[[["nested"]]]]]' } },
+      json.encode, { {{{{{"nested"}}}}} }, true, { '[[[[["nested"]]]]]' } },
     { "Encode nested table (throw error)",
-      json.encode, { { testdata.nested5 } },
+      json.encode, { { {{{{{"nested"}}}}} } },
       false, { "Cannot serialise, excessive nesting (6)" } },
     { "Encode table with cycle",
       json.encode, { testdata.table_cycle },
