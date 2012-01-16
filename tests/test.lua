@@ -61,7 +61,7 @@ function load_testdata()
     local utf8_loaded
     utf8_loaded, data.utf8_raw = pcall(util.file_load, "utf8.dat")
     if not utf8_loaded then
-        data.utf8_raw = "Failed to load utf8.dat"
+        data.utf8_raw = "Failed to load utf8.dat - please run genutf8.pl"
     end
 
     data.table_cycle = {}
