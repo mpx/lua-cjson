@@ -2,7 +2,7 @@ package = "lua-cjson"
 version = "1.0devel-1"
 
 source = {
-    url = "http://www.kyne.com.au/~mark/software/lua-cjson-1.0devel.zip",
+    url = "http://www.kyne.com.au/~mark/software/download/lua-cjson-1.0devel.zip",
 }
 
 description = {
