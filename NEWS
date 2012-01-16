@@ -1,10 +1,19 @@
 Version 2.0.0 (Jan ? 2012)
+* Improved platform compatibility for strtod/sprintf locale workaround
+* Added option to build with David Gay's dtoa.c for improved performance
 * Added support for Lua 5.2
-* Added HTML reference manual
-* Added CMake build support
+* Added option to encode infinity/NaN as JSON null
+* Fixed encode bug with a raised default limit and deeply nested tables
 * Updated Makefile for compatibility with non-GNU make implementations
-* Improved compatibility for strtod/sprintf locale workaround
-* Encoding now supports pre-emptive threads within a single Lua state
+* Added CMake build support
+* Added HTML manual
+* Increased default nesting limit to 1000
+* Added support for re-entrant use of encode and decode
+* Added support for installing lua2json and json2lua utilities
+* Added encode_invalid_numbers() and decode_invalid_numbers()
+* Added decode_max_depth()
+* Removed registration of global cjson module table
+* Removed refuse_invalid_numbers()
 
 Version 1.0.4 (Nov 30 2011)
 * Fixed numeric conversion under locales with a comma decimal separator
