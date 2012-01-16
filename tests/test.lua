@@ -83,11 +83,16 @@ local NaN = math.huge * 0;
 local testdata = load_testdata()
 
 local all_tests = {
+    { "Check module name, version",
+      function () return json._NAME, json._VERSION, json.version end, { },
+      true, { "cjson", "1.0devel", "1.0devel" } },
+
     -- Simple decode tests
     { "Decode string",
       json.decode, { '"test string"' }, true, { "test string" } },
-    { "Decode number with exponent",
-      json.decode, { '-5e3' }, true, { -5000 } },
+    { "Decode numbers",
+      json.decode, { '[ 0.0, -5e3, -1, 0.3e-3, 1023.2, 00123, 05.2, 0e10 ]' },
+      true, { { 0.0, -5000, -1, 0.0003, 1023.2, 123, 5.2, 0 } } },
     { "Decode null",
       json.decode, { 'null' }, true, { json.null } },
     { "Decode true",
@@ -100,32 +105,6 @@ local all_tests = {
     { "Decode array",
       json.decode, { '[ "one", null, "three" ]' },
       true, { { "one", json.null, "three" } } },
-
-    -- Numeric decode tests
-    { "Decode various numbers",
-      json.decode, { '[ 0.0, -1, 0.3e-3, 1023.2 ]' },
-      true, { { 0.0, -1, 0.0003, 1023.2 } } },
-    { "Decode integer with leading zeros",
-      json.decode, { '00123' }, true, { 123 } },
-    { "Decode floating point with leading zero",
-      json.decode, { '05.2' }, true, { 5.2 } },
-    { "Decode zero with exponent",
-      json.decode, { '0e10' }, true, { 0 } },
-    { "Decode hexadecimal",
-      json.decode, { '0x6' }, true, { 6 } },
-    { "Decode +-Inf",
-      json.decode, { '[ +Inf, Inf, -Inf ]' }, true, { { Inf, Inf, -Inf } } },
-    { "Decode +-Infinity",
-      json.decode, { '[ +Infinity, Infinity, -Infinity ]' },
-      true, { { Inf, Inf, -Inf } } },
-    { "Decode +-NaN",
-      json.decode, { '[ +NaN, NaN, -NaN ]' }, true, { { NaN, NaN, NaN } } },
-    { "Decode Infrared (not infinity)",
-      json.decode, { 'Infrared' },
-      false, { "Expected the end but found invalid token at character 4" } },
-    { "Decode Noodle (not NaN)",
-      json.decode, { 'Noodle' },
-      false, { "Expected value but found invalid token at character 1" } },
 
     -- Decode error tests
     { "Decode UTF-16BE",
@@ -164,18 +143,43 @@ local all_tests = {
     { "Decode invalid number exponent",
       json.decode, { '[ 0.4eg10 ]' },
       false, { "Expected comma or array end but found invalid token at character 6" } },
-    { "Setting decode_max_depth(5)", function ()
-        json.decode_max_depth(5)
-    end },
+
+    -- Test nested tables / arrays / objects
+    { "Set decode_max_depth(5)",
+      json.decode_max_depth, { 5 }, true, { 5 } },
     { "Decode array at nested limit",
       json.decode, { '[[[[[ "nested" ]]]]]' },
       true, { {{{{{ "nested" }}}}} } },
     { "Decode array over nested limit",
       json.decode, { '[[[[[[ "nested" ]]]]]]' },
       false, { "Too many nested data structures" } },
-    { "Setting decode_max_depth(1000)", function ()
-        json.decode_max_depth(1000)
-    end },
+    { "Decode object at nested limit",
+      json.decode, { '{"a":{"b":{"c":{"d":{"e":"nested"}}}}}' },
+      true, { {a={b={c={d={e="nested"}}}}} } },
+    { "Decode object over nested limit",
+      json.decode, { '{"a":{"b":{"c":{"d":{"e":{"f":"nested"}}}}}}' },
+      false, { "Too many nested data structures" } },
+    { "Set decode_max_depth(1000)",
+      json.decode_max_depth, { 1000 }, true, { 1000 } },
+
+    { "Set encode_max_depth(5)",
+      json.encode_max_depth, { 5 }, true, { 5 } },
+    { "Encode nested table as array at nested limit",
+      json.encode, { {{{{{"nested"}}}}} }, true, { '[[[[["nested"]]]]]' } },
+    { "Encode nested table as array after nested limit",
+      json.encode, { { {{{{{"nested"}}}}} } },
+      false, { "Cannot serialise, excessive nesting (6)" } },
+    { "Encode nested table as object at nested limit",
+      json.encode, { {a={b={c={d={e="nested"}}}}} },
+      true, { '{"a":{"b":{"c":{"d":{"e":"nested"}}}}}' } },
+    { "Encode nested table as object over nested limit",
+      json.encode, { {a={b={c={d={e={f="nested"}}}}}} },
+      false, { "Cannot serialise, excessive nesting (6)" } },
+    { "Encode table with cycle",
+      json.encode, { testdata.table_cycle },
+      false, { "Cannot serialise, excessive nesting (6)" } },
+    { "Set encode_max_depth(1000)",
+      json.encode_max_depth, { 1000 }, true, { 1000 } },
 
     -- Simple encode tests
     { "Encode null",
@@ -188,20 +192,82 @@ local all_tests = {
       json.encode, { { } }, true, { '{}' } },
     { "Encode integer",
       json.encode, { 10 }, true, { '10' } },
+    { "Encode string",
+      json.encode, { "hello" }, true, { '"hello"' } },
+
+    { "Set encode_keep_buffer(false)",
+      json.encode_keep_buffer, { false }, true, { "off" } },
+    { "Set encode_number_precision(3)",
+      json.encode_number_precision, { 3 }, true, { 3 } },
+    { "Encode number with precision 3",
+      json.encode, { 1/3 }, true, { "0.333" } },
+    { "Set encode_number_precision(14)",
+      json.encode_number_precision, { 14 }, true, { 14 } },
+    { "Set encode_keep_buffer(true)",
+      json.encode_keep_buffer, { true }, true, { "on" } },
+
+    -- Test decoding invalid numbers
+    { "Set decode_invalid_numbers(true)",
+      json.decode_invalid_numbers, { true }, true, { "on" } },
+    { "Decode hexadecimal",
+      json.decode, { '0x6' }, true, { 6 } },
+    { "Decode +-Inf",
+      json.decode, { '[ +Inf, Inf, -Inf ]' }, true, { { Inf, Inf, -Inf } } },
+    { "Decode +-Infinity",
+      json.decode, { '[ +Infinity, Infinity, -Infinity ]' },
+      true, { { Inf, Inf, -Inf } } },
+    { "Decode +-NaN",
+      json.decode, { '[ +NaN, NaN, -NaN ]' }, true, { { NaN, NaN, NaN } } },
+    { "Decode Infrared (not infinity)",
+      json.decode, { 'Infrared' },
+      false, { "Expected the end but found invalid token at character 4" } },
+    { "Decode Noodle (not NaN)",
+      json.decode, { 'Noodle' },
+      false, { "Expected value but found invalid token at character 1" } },
+    { "Set decode_invalid_numbers(false)",
+      json.decode_invalid_numbers, { false }, true, { "off" } },
+    { "Decode hexadecimal (throw error)",
+      json.decode, { '0x6' },
+      false, { "Expected value but found invalid number at character 1" } },
+    { "Decode +-Inf (throw error)",
+      json.decode, { '[ +Inf, Inf, -Inf ]' },
+      false, { "Expected value but found invalid token at character 3" } },
+    { "Decode +-Infinity (throw error)",
+      json.decode, { '[ +Infinity, Infinity, -Infinity ]' },
+      false, { "Expected value but found invalid token at character 3" } },
+    { "Decode +-NaN (throw error)",
+      json.decode, { '[ +NaN, NaN, -NaN ]' },
+      false, { "Expected value but found invalid token at character 3" } },
+    { 'Set decode_invalid_numbers("on")',
+      json.decode_invalid_numbers, { "on" }, true, { "on" } },
+
+    -- Test encoding invalid numbers
+    { "Set encode_invalid_numbers(false)",
+      json.encode_invalid_numbers, { false }, true, { "off" } },
     { "Encode NaN (invalid numbers disabled)",
       json.encode, { NaN },
       false, { "Cannot serialise number: must not be NaN or Inf" } },
     { "Encode Infinity (invalid numbers disabled)",
       json.encode, { Inf },
       false, { "Cannot serialise number: must not be NaN or Inf" } },
-    { "Encode string",
-      json.encode, { "hello" }, true, { '"hello"' } },
+    { "Set encode_invalid_numbers(\"null\")",
+      json.encode_invalid_numbers, { "null" }, true, { "null" } },
+    { "Encode NaN as null",
+      json.encode, { NaN }, true, { "null" } },
+    { "Encode Infinity as null",
+      json.encode, { Inf }, true, { "null" } },
+    { "Set encode_invalid_numbers(true)",
+      json.encode_invalid_numbers, { true }, true, { "on" } },
+    { "Encode NaN",
+      json.encode, { NaN }, true, { "nan" } },
+    { "Encode Infinity",
+      json.encode, { Inf }, true, { "inf" } },
+    { 'Set encode_invalid_numbers("off")',
+      json.encode_invalid_numbers, { "off" }, true, { "off" } },
 
     -- Table encode tests
-    { "Setting sparse array (true, 2, 3) / max depth (5)", function()
-        json.encode_sparse_array(true, 2, 3)
-        json.encode_max_depth(5)
-    end },
+    { "Set encode_sparse_array(true, 2, 3)",
+      json.encode_sparse_array, { true, 2, 3 }, true, { true, 2, 3 } },
     { "Encode sparse table as array #1",
       json.encode, { { [3] = "sparse test" } },
       true, { '[null,null,"sparse test"]' } },
@@ -216,15 +282,6 @@ local all_tests = {
       json.encode, { { ["2"] = "numeric string key test" } },
       true, { '{"2":"numeric string key test"}' } },
 
-    { "Encode nested table",
-      json.encode, { {{{{{"nested"}}}}} }, true, { '[[[[["nested"]]]]]' } },
-    { "Encode nested table (throw error)",
-      json.encode, { { {{{{{"nested"}}}}} } },
-      false, { "Cannot serialise, excessive nesting (6)" } },
-    { "Encode table with cycle",
-      json.encode, { testdata.table_cycle },
-      false, { "Cannot serialise, excessive nesting (6)" } },
-
     -- Encode error tests
     { "Encode table with incompatible key",
       json.encode, { { [false] = "wrong" } },
@@ -232,32 +289,6 @@ local all_tests = {
     { "Encode Lua function",
       json.encode, { function () end },
       false, { "Cannot serialise function: type not supported" } },
-    { "Setting encode_invalid_numbers(false)", function ()
-        json.encode_invalid_numbers(false)
-    end },
-    { "Encode NaN (invalid numbers disabled)",
-      json.encode, { NaN },
-      false, { "Cannot serialise number: must not be NaN or Inf" } },
-    { "Encode Infinity (invalid numbers disabled)",
-      json.encode, { Inf },
-      false, { "Cannot serialise number: must not be NaN or Inf" } },
-    { 'Setting encode_invalid_numbers("null").', function ()
-        json.encode_invalid_numbers("null")
-    end },
-    { "Encode NaN as null",
-      json.encode, { NaN }, true, { "null" } },
-    { "Encode Infinity as null",
-      json.encode, { Inf }, true, { "null" } },
-    { 'Setting encode_invalid_numbers(true).', function ()
-        json.encode_invalid_numbers(true)
-    end },
-    { "Encode NaN",
-      json.encode, { NaN }, true, { "nan" } },
-    { "Encode Infinity",
-      json.encode, { Inf }, true, { "inf" } },
-    { 'Setting encode_invalid_numbers(false)', function ()
-        json.encode_invalid_numbers(false)
-    end },
 
     -- Escaping tests
     { "Encode all octets (8-bit clean)",
@@ -266,6 +297,8 @@ local all_tests = {
       json.decode, { testdata.octets_escaped }, true, { testdata.octets_raw } },
     { "Decode single UTF-16 escape",
       json.decode, { [["\uF800"]] }, true, { "\239\160\128" } },
+    { "Decode all UTF-16 escapes (including surrogate combinations)",
+      json.decode, { testdata.utf16_escaped }, true, { testdata.utf8_raw } },
     { "Decode swapped surrogate pair",
       json.decode, { [["\uDC00\uD800"]] },
       false, { "Expected value but found invalid unicode escape code at character 2" } },
@@ -281,14 +314,12 @@ local all_tests = {
     { "Decode invalid low surrogate",
       json.decode, { [["\uDB00\uD"]] },
       false, { "Expected value but found invalid unicode escape code at character 2" } },
-    { "Decode all UTF-16 escapes (including surrogate combinations)",
-      json.decode, { testdata.utf16_escaped }, true, { testdata.utf8_raw } },
 
     -- Locale tests
     --
     -- The standard Lua interpreter is ANSI C online doesn't support locales
     -- by default. Force a known problematic locale to test strtod()/sprintf().
-    { "Setting locale to cs_CZ (comma separator)", function ()
+    { "Set locale to cs_CZ (comma separator)", function ()
         os.setlocale("cs_CZ")
         json.new()
     end },
@@ -296,7 +327,7 @@ local all_tests = {
       json.encode, { 1.5 }, true, { '1.5' } },
     { "Decode number in array under comma locale",
       json.decode, { '[ 10, "test" ]' }, true, { { 10, "test" } } },
-    { "Reverting locale to POSIX", function ()
+    { "Revert locale to POSIX", function ()
         os.setlocale("C")
         json.new()
     end },
@@ -306,11 +337,8 @@ print(string.format("Testing Lua CJSON version %s\n", json.version))
 
 util.run_test_group(all_tests)
 
-json.encode_invalid_numbers(true)
-json.decode_invalid_numbers(true)
-json.encode_max_depth(20)
-for i = 1, #arg do
-    util.run_test("Decode cycle " .. arg[i], test_decode_cycle, { arg[i] },
+for _, filename in ipairs(arg) do
+    util.run_test("Decode cycle " .. filename, test_decode_cycle, { filename },
                   true, { true })
 end
 
