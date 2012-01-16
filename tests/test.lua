@@ -82,12 +82,13 @@ local NaN = math.huge * 0;
 
 local testdata = load_testdata()
 
-local all_tests = {
+local cjson_tests = {
+    -- Test API variables
     { "Check module name, version",
       function () return json._NAME, json._VERSION, json.version end, { },
       true, { "cjson", "1.0devel", "1.0devel" } },
 
-    -- Simple decode tests
+    -- Test decoding simple types
     { "Decode string",
       json.decode, { '"test string"' }, true, { "test string" } },
     { "Decode numbers",
@@ -102,11 +103,14 @@ local all_tests = {
     { "Decode object with numeric keys",
       json.decode, { '{ "1": "one", "3": "three" }' },
       true, { { ["1"] = "one", ["3"] = "three" } } },
+    { "Decode object with string keys",
+      json.decode, { '{ "a": "a", "b": "b" }' },
+      true, { { a = "a", b = "b" } } },
     { "Decode array",
       json.decode, { '[ "one", null, "three" ]' },
       true, { { "one", json.null, "three" } } },
 
-    -- Decode error tests
+    -- Test decoding errors
     { "Decode UTF-16BE",
       json.decode, { '\0"\0"' },
       false, { "JSON parser does not support UTF-16 or UTF-32" } },
@@ -144,7 +148,7 @@ local all_tests = {
       json.decode, { '[ 0.4eg10 ]' },
       false, { "Expected comma or array end but found invalid token at character 6" } },
 
-    -- Test nested tables / arrays / objects
+    -- Test decoding nested arrays / objects
     { "Set decode_max_depth(5)",
       json.decode_max_depth, { 5 }, true, { 5 } },
     { "Decode array at nested limit",
@@ -162,6 +166,7 @@ local all_tests = {
     { "Set decode_max_depth(1000)",
       json.decode_max_depth, { 1000 }, true, { 1000 } },
 
+    -- Test encoding nested tables
     { "Set encode_max_depth(5)",
       json.encode_max_depth, { 5 }, true, { 5 } },
     { "Encode nested table as array at nested limit",
@@ -181,7 +186,7 @@ local all_tests = {
     { "Set encode_max_depth(1000)",
       json.encode_max_depth, { 1000 }, true, { 1000 } },
 
-    -- Simple encode tests
+    -- Test encoding simple types
     { "Encode null",
       json.encode, { json.null }, true, { 'null' } },
     { "Encode true",
@@ -194,17 +199,9 @@ local all_tests = {
       json.encode, { 10 }, true, { '10' } },
     { "Encode string",
       json.encode, { "hello" }, true, { '"hello"' } },
-
-    { "Set encode_keep_buffer(false)",
-      json.encode_keep_buffer, { false }, true, { "off" } },
-    { "Set encode_number_precision(3)",
-      json.encode_number_precision, { 3 }, true, { 3 } },
-    { "Encode number with precision 3",
-      json.encode, { 1/3 }, true, { "0.333" } },
-    { "Set encode_number_precision(14)",
-      json.encode_number_precision, { 14 }, true, { 14 } },
-    { "Set encode_keep_buffer(true)",
-      json.encode_keep_buffer, { true }, true, { "on" } },
+    { "Encode Lua function",
+      json.encode, { function () end },
+      false, { "Cannot serialise function: type not supported" } },
 
     -- Test decoding invalid numbers
     { "Set decode_invalid_numbers(true)",
@@ -265,9 +262,9 @@ local all_tests = {
     { 'Set encode_invalid_numbers("off")',
       json.encode_invalid_numbers, { "off" }, true, { "off" } },
 
-    -- Table encode tests
+    -- Test encoding tables
     { "Set encode_sparse_array(true, 2, 3)",
-      json.encode_sparse_array, { true, 2, 3 }, true, { true, 2, 3 } },
+      json.encode_sparse_array, { true, 2, 3 }, true, { "on", 2, 3 } },
     { "Encode sparse table as array #1",
       json.encode, { { [3] = "sparse test" } },
       true, { '[null,null,"sparse test"]' } },
@@ -277,20 +274,16 @@ local all_tests = {
     { "Encode sparse array as object",
       json.encode, { { [1] = "one", [5] = "sparse test" } },
       true, { '{"1":"one","5":"sparse test"}' } },
-
     { "Encode table with numeric string key as object",
       json.encode, { { ["2"] = "numeric string key test" } },
       true, { '{"2":"numeric string key test"}' } },
-
-    -- Encode error tests
+    { "Set encode_sparse_array(false)",
+      json.encode_sparse_array, { false }, true, { "off", 2, 3 } },
     { "Encode table with incompatible key",
       json.encode, { { [false] = "wrong" } },
       false, { "Cannot serialise boolean: table key must be a number or string" } },
-    { "Encode Lua function",
-      json.encode, { function () end },
-      false, { "Cannot serialise function: type not supported" } },
 
-    -- Escaping tests
+    -- Test escaping
     { "Encode all octets (8-bit clean)",
       json.encode, { testdata.octets_raw }, true, { testdata.octets_escaped } },
     { "Decode all escaped octets",
@@ -315,7 +308,7 @@ local all_tests = {
       json.decode, { [["\uDB00\uD"]] },
       false, { "Expected value but found invalid unicode escape code at character 2" } },
 
-    -- Locale tests
+    -- Test locale support
     --
     -- The standard Lua interpreter is ANSI C online doesn't support locales
     -- by default. Force a known problematic locale to test strtod()/sprintf().
@@ -331,11 +324,56 @@ local all_tests = {
         os.setlocale("C")
         json.new()
     end },
+
+    -- Test encode_keep_buffer() and enable_number_precision()
+    { "Set encode_keep_buffer(false)",
+      json.encode_keep_buffer, { false }, true, { "off" } },
+    { "Set encode_number_precision(3)",
+      json.encode_number_precision, { 3 }, true, { 3 } },
+    { "Encode number with precision 3",
+      json.encode, { 1/3 }, true, { "0.333" } },
+    { "Set encode_number_precision(14)",
+      json.encode_number_precision, { 14 }, true, { 14 } },
+    { "Set encode_keep_buffer(true)",
+      json.encode_keep_buffer, { true }, true, { "on" } },
+
+    -- Test config API errors
+    -- Function is listed as '?' due to pcall
+    { "Set encode_number_precision(0)",
+      json.encode_number_precision, { 0 },
+      false, { "bad argument #1 to '?' (expected integer between 1 and 14)" } },
+    { "Set encode_number_precision(\"five\")",
+      json.encode_number_precision, { "five" },
+      false, { "bad argument #1 to '?' (number expected, got string)" } },
+    { "Set encode_keep_buffer(nil, true)",
+      json.encode_keep_buffer, { nil, true },
+      false, { "bad argument #2 to '?' (found too many arguments)" } },
+    { "Set encode_max_depth(\"wrong\")",
+      json.encode_max_depth, { "wrong" },
+      false, { "bad argument #1 to '?' (number expected, got string)" } },
+    { "Set decode_max_depth(0)",
+      json.decode_max_depth, { "0" },
+      false, { "bad argument #1 to '?' (expected integer between 1 and 2147483647)" } },
+    { "Set encode_invalid_numbers(-2)",
+      json.encode_invalid_numbers, { -2 },
+      false, { "bad argument #1 to '?' (invalid option '-2')" } },
+    { "Set decode_invalid_numbers(true, false)",
+      json.decode_invalid_numbers, { true, false },
+      false, { "bad argument #2 to '?' (found too many arguments)" } },
+    { "Set encode_sparse_array(\"not quite on\")",
+      json.encode_sparse_array, { "not quite on" },
+      false, { "bad argument #1 to '?' (invalid option 'not quite on')" } },
+
+    { "Reset Lua CJSON configuration", function () json = json.new() end },
+    -- Wrap in a function to ensure the table returned by json.new() is used
+    { "Check encode_sparse_array()",
+      function (...) return json.encode_sparse_array(...) end, { },
+      true, { "off", 2, 10 } },
 }
 
-print(string.format("Testing Lua CJSON version %s\n", json.version))
+print(string.format("Testing Lua CJSON version %s\n", json._VERSION))
 
-util.run_test_group(all_tests)
+util.run_test_group(cjson_tests)
 
 for _, filename in ipairs(arg) do
     util.run_test("Decode cycle " .. filename, test_decode_cycle, { filename },
