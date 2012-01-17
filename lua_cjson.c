@@ -564,12 +564,17 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
 static void json_check_encode_depth(lua_State *l, json_config_t *cfg,
                                     int current_depth, strbuf_t *json)
 {
-    if (current_depth > cfg->encode_max_depth) {
-        if (!cfg->encode_keep_buffer)
-            strbuf_free(json);
-        luaL_error(l, "Cannot serialise, excessive nesting (%d)",
-                   current_depth);
-    }
+    /* Ensure there are enough slots free to traverse a table (key, value).
+     * luaL_error() and other Lua API functions use space from the
+     * "EXTRA_STACK" reserve. */
+    if (current_depth <= cfg->encode_max_depth && lua_checkstack(l, 2))
+        return;
+
+    if (!cfg->encode_keep_buffer)
+        strbuf_free(json);
+
+    luaL_error(l, "Cannot serialise, excessive nesting (%d)",
+               current_depth);
 }
 
 static void json_append_data(lua_State *l, json_config_t *cfg,
@@ -692,9 +697,9 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
             strbuf_append_mem(json, "false", 5);
         break;
     case LUA_TTABLE:
-        len = lua_array_length(l, cfg, json);
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
+        len = lua_array_length(l, cfg, json);
         if (len > 0)
             json_append_array(l, cfg, current_depth, json, len);
         else

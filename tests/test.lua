@@ -67,6 +67,12 @@ function load_testdata()
     data.table_cycle = {}
     data.table_cycle[1] = data.table_cycle
 
+    local big = {}
+    for i = 1, 1100 do
+        big = { { 10, false, true, cjson.null }, "string", a = big }
+    end
+    data.deeply_nested_data = big
+
     return data
 end
 
@@ -185,6 +191,9 @@ local cjson_tests = {
       false, { "Cannot serialise, excessive nesting (6)" } },
     { "Set encode_max_depth(1000)",
       json.encode_max_depth, { 1000 }, true, { 1000 } },
+    { "Encode deeply nested data [throw error]",
+      json.encode, { testdata.deeply_nested_data },
+      false, { "Cannot serialise, excessive nesting (1001)" } },
 
     -- Test encoding simple types
     { "Encode null",
