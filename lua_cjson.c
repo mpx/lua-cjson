@@ -1034,7 +1034,7 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
  */
 static void json_next_token(json_parse_t *json, json_token_t *token)
 {
-    json_token_type_t *ch2token = json->cfg->ch2token;
+    const json_token_type_t *ch2token = json->cfg->ch2token;
     int ch;
 
     /* Eat whitespace. */
@@ -1149,7 +1149,8 @@ static void json_decode_descend(lua_State *l, json_parse_t *json, int slots)
     }
 
     strbuf_free(json->tmp);
-    luaL_error(l, "Too many nested data structures");
+    luaL_error(l, "Found too many nested data structures (%d) at character %d",
+        json->current_depth, json->ptr - json->data);
 }
 
 static void json_parse_object_context(lua_State *l, json_parse_t *json)
