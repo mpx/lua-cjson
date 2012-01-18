@@ -354,41 +354,6 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
     return 1;
 }
 
-/* When enabled, rejects: NaN, Infinity, hexadecimal numbers.
- *
- * This function has been deprecated and may be removed in future. */
-static int json_cfg_refuse_invalid_numbers(lua_State *l)
-{
-    static const char *options[] = { "none", "encode", "decode", "both", NULL };
-    json_config_t *cfg = json_arg_init(l, 1);
-    int setting;
-
-    /* Map config variables to options list index */
-    setting = !cfg->encode_invalid_numbers +            /* bit 0 */
-              (!cfg->decode_invalid_numbers << 1);      /* bit 1 */
-
-    json_enum_option(l, 1, &setting, options, 3);
-
-    /* Map options list index to config variables
-     *
-     * Only update the config variables when an argument has been provided.
-     * Otherwise a "null" encoding setting may inadvertently be disabled. */
-    if (!lua_isnil(l, 1)) {
-        cfg->encode_invalid_numbers = !(setting & 1);
-        cfg->decode_invalid_numbers = !(setting & 2);
-
-#if DISABLE_INVALID_NUMBERS
-        if (cfg->encode_invalid_numbers || cfg->decode_invalid_numbers) {
-            cfg->encode_invalid_numbers = cfg->decode_invalid_numbers = 0;
-            luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
-        }
-#endif
-
-    }
-
-    return 1;
-}
-
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
@@ -1348,7 +1313,6 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
-        { "refuse_invalid_numbers", json_cfg_refuse_invalid_numbers },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };
@@ -1372,8 +1336,6 @@ static int lua_cjson_new(lua_State *l)
     lua_setfield(l, -2, "_NAME");
     lua_pushliteral(l, CJSON_VERSION);
     lua_setfield(l, -2, "_VERSION");
-    lua_pushliteral(l, CJSON_VERSION);
-    lua_setfield(l, -2, "version");
 
     return 1;
 }

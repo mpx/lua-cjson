@@ -91,8 +91,8 @@ local testdata = load_testdata()
 local cjson_tests = {
     -- Test API variables
     { "Check module name, version",
-      function () return json._NAME, json._VERSION, json.version end, { },
-      true, { "cjson", "1.1devel", "1.1devel" } },
+      function () return json._NAME, json._VERSION end, { },
+      true, { "cjson", "1.1devel" } },
 
     -- Test decoding simple types
     { "Decode string",
