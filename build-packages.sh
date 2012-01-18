@@ -5,7 +5,7 @@
 # Build packages. Use current checked out version, or a specific tag/commit.
 
 # Files requiring a version bump
-VERSION_FILES="lua-cjson-1.0devel-1.rockspec lua-cjson.spec lua_cjson.c manual.txt runtests.sh tests/test.lua"
+VERSION_FILES="lua-cjson-1.1devel-1.rockspec lua-cjson.spec lua_cjson.c manual.txt runtests.sh tests/test.lua"
 
 [ "$1" ] && BRANCH="$1" || BRANCH="`git describe --match '1.[0-9]*'`"
 VERSION="`git describe --match '1.[0-9]*' $BRANCH`"
@@ -25,8 +25,8 @@ git archive --prefix="$PREFIX/" "$BRANCH" | tar xf - -C "$BUILDROOT"
 cd "$BUILDROOT"
 
 cd "$PREFIX"
-rename 1.0devel "$VERSION" $VERSION_FILES
-perl -pi -e "s/\\b1.0devel\\b/$VERSION/g" ${VERSION_FILES/1.0devel/$VERSION};
+rename 1.1devel "$VERSION" $VERSION_FILES
+perl -pi -e "s/\\b1.1devel\\b/$VERSION/g" ${VERSION_FILES/1.1devel/$VERSION};
 cd ..
 
 make -C "$PREFIX" doc

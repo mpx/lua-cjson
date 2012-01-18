@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PLATFORM="`uname -s`"
-[ "$1" ] && VERSION="$1" || VERSION="1.0devel"
+[ "$1" ] && VERSION="$1" || VERSION="1.1devel"
 
 set -e
 

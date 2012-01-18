@@ -51,7 +51,7 @@
 #endif
 
 #ifndef CJSON_VERSION
-#define CJSON_VERSION   "1.0devel"
+#define CJSON_VERSION   "1.1devel"
 #endif
 
 /* Workaround for Solaris platforms missing isinf() */
