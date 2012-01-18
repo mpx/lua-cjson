@@ -6,6 +6,7 @@
 project(lua-cjson C)
 cmake_minimum_required(VERSION 2.6)
 
+option(DISABLE_CJSON_GLOBAL "Disable global registration of the 'cjson' module table")
 option(USE_INTERNAL_DTOA "Use internal strtod() / dtoa code for performance")
 option(MULTIPLE_THREADS
        "Build internal dtoa with support for multi-threaded applications - recommended" ON)
@@ -18,6 +19,10 @@ endif()
 
 find_package(Lua51 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
+
+if(DISABLE_CJSON_GLOBAL)
+    add_definitions(-DDISABLE_CJSON_GLOBAL)
+endif()
 
 if(NOT USE_INTERNAL_DTOA)
     # Use libc number conversion routines (strtod(), sprintf())
