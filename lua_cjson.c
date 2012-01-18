@@ -1382,13 +1382,8 @@ int luaopen_cjson(lua_State *l)
 {
     lua_cjson_new(l);
 
-#if !defined(DISABLE_CJSON_GLOBAL) && (!defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502)
-    /* Register a global "cjson" table to maintain compatibility with earlier
-     * versions of Lua CJSON which used luaL_register() under Lua 5.1.
-     *
-     * From Lua 5.2 onwards, Lua CJSON does not automatically register a global
-     * table.
-     */
+#ifdef ENABLE_CJSON_GLOBAL
+    /* Register a global "cjson" table. */
     lua_pushvalue(l, -1);
     lua_setglobal(l, CJSON_MODNAME);
 #endif

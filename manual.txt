@@ -113,9 +113,9 @@ Build Options (#define)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 [horizontal]
+ENABLE_CJSON_GLOBAL:: Register +cjson+ module table as a global
+  variable (not recommended).
 USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing ++isinf++(3).
-DISABLE_CJSON_GLOBAL:: Do not store module table in global "cjson"
-  variable. Redundant from Lua 5.2 onwards.
 DISABLE_INVALID_NUMBERS:: Recommended on platforms where ++strtod++(3) /
   ++sprintf++(3) are not POSIX compliant (Eg, Windows MinGW). Prevents
   +cjson.encode_invalid_numbers+ and +cjson.decode_invalid_numbers+

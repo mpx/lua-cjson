@@ -69,7 +69,7 @@ function load_testdata()
 
     local big = {}
     for i = 1, 1100 do
-        big = { { 10, false, true, cjson.null }, "string", a = big }
+        big = { { 10, false, true, json.null }, "string", a = big }
     end
     data.deeply_nested_data = big
 
