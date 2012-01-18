@@ -217,7 +217,7 @@ local cjson_tests = {
 
     -- Test decoding invalid numbers
     { "Set decode_invalid_numbers(true)",
-      json.decode_invalid_numbers, { true }, true, { "on" } },
+      json.decode_invalid_numbers, { true }, true, { true } },
     { "Decode hexadecimal",
       json.decode, { '0x6' }, true, { 6 } },
     { "Decode +-Inf",
@@ -234,7 +234,7 @@ local cjson_tests = {
       json.decode, { 'Noodle' },
       false, { "Expected value but found invalid token at character 1" } },
     { "Set decode_invalid_numbers(false)",
-      json.decode_invalid_numbers, { false }, true, { "off" } },
+      json.decode_invalid_numbers, { false }, true, { false } },
     { "Decode hexadecimal [throw error]",
       json.decode, { '0x6' },
       false, { "Expected value but found invalid number at character 1" } },
@@ -248,11 +248,11 @@ local cjson_tests = {
       json.decode, { '[ +NaN, NaN, -NaN ]' },
       false, { "Expected value but found invalid token at character 3" } },
     { 'Set decode_invalid_numbers("on")',
-      json.decode_invalid_numbers, { "on" }, true, { "on" } },
+      json.decode_invalid_numbers, { "on" }, true, { true } },
 
     -- Test encoding invalid numbers
     { "Set encode_invalid_numbers(false)",
-      json.encode_invalid_numbers, { false }, true, { "off" } },
+      json.encode_invalid_numbers, { false }, true, { false } },
     { "Encode NaN [throw error]",
       json.encode, { NaN },
       false, { "Cannot serialise number: must not be NaN or Inf" } },
@@ -266,17 +266,17 @@ local cjson_tests = {
     { "Encode Infinity as null",
       json.encode, { Inf }, true, { "null" } },
     { "Set encode_invalid_numbers(true)",
-      json.encode_invalid_numbers, { true }, true, { "on" } },
+      json.encode_invalid_numbers, { true }, true, { true } },
     { "Encode NaN",
       json.encode, { NaN }, true, { "nan" } },
     { "Encode Infinity",
       json.encode, { Inf }, true, { "inf" } },
     { 'Set encode_invalid_numbers("off")',
-      json.encode_invalid_numbers, { "off" }, true, { "off" } },
+      json.encode_invalid_numbers, { "off" }, true, { false } },
 
     -- Test encoding tables
     { "Set encode_sparse_array(true, 2, 3)",
-      json.encode_sparse_array, { true, 2, 3 }, true, { "on", 2, 3 } },
+      json.encode_sparse_array, { true, 2, 3 }, true, { true, 2, 3 } },
     { "Encode sparse table as array #1",
       json.encode, { { [3] = "sparse test" } },
       true, { '[null,null,"sparse test"]' } },
@@ -290,7 +290,7 @@ local cjson_tests = {
       json.encode, { { ["2"] = "numeric string key test" } },
       true, { '{"2":"numeric string key test"}' } },
     { "Set encode_sparse_array(false)",
-      json.encode_sparse_array, { false }, true, { "off", 2, 3 } },
+      json.encode_sparse_array, { false }, true, { false, 2, 3 } },
     { "Encode table with incompatible key [throw error]",
       json.encode, { { [false] = "wrong" } },
       false, { "Cannot serialise boolean: table key must be a number or string" } },
@@ -339,7 +339,7 @@ local cjson_tests = {
 
     -- Test encode_keep_buffer() and enable_number_precision()
     { "Set encode_keep_buffer(false)",
-      json.encode_keep_buffer, { false }, true, { "off" } },
+      json.encode_keep_buffer, { false }, true, { false } },
     { "Set encode_number_precision(3)",
       json.encode_number_precision, { 3 }, true, { 3 } },
     { "Encode number with precision 3",
@@ -347,7 +347,7 @@ local cjson_tests = {
     { "Set encode_number_precision(14)",
       json.encode_number_precision, { 14 }, true, { 14 } },
     { "Set encode_keep_buffer(true)",
-      json.encode_keep_buffer, { true }, true, { "on" } },
+      json.encode_keep_buffer, { true }, true, { true } },
 
     -- Test config API errors
     -- Function is listed as '?' due to pcall
@@ -380,7 +380,7 @@ local cjson_tests = {
     -- Wrap in a function to ensure the table returned by json.new() is used
     { "Check encode_sparse_array()",
       function (...) return json.encode_sparse_array(...) end, { },
-      true, { "off", 2, 10 } },
+      true, { false, 2, 10 } },
 }
 
 print(string.format("==> Testing Lua CJSON version %s\n", json._VERSION))
