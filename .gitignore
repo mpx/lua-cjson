@@ -1,6 +1,6 @@
+*.html
 *.o
 *.so
-manual.html
 notes
 packages
 tags

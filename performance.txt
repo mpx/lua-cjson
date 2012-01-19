@@ -1,51 +1,69 @@
-JSON Performance Comparison under Lua
--------------------------------------
+JSON performance under Lua
+==========================
 
-The following JSON packages for Lua were tested:
+Modules
+-------
 
-- DKJSON 1.0: One of the fastest pure Lua JSON implementations.
-- LuaJSON 1.0: A mixed Lua/C JSON implementation using LPeg.
-- Lua YAJL 2.0: A Lua wrapper for the YAJL JSON library.
-- CSJON 1.0.2: Pure C.
+The following fast JSON libraries for Lua were tested:
 
-LuaJSON 1.2.2 appeared to be slower during initial testing, so 1.0 was
-used instead.
+[horizontal]
+http://chiselapp.com/user/dhkolf/repository/dkjson/[DKJSON 2.1]::
+  - A Lua implementation with no dependencies
+  - Also supports LPeg to improve decode performance
+  - Tested with/without LPeg 10.2
+https://github.com/brimworks/lua-yajl[Lua YAJL 2.0]::
+  - A C wrapper for the YAJL library
+  - Built with YAJL 2.0.4
+http://www.kyne.com.au/~mark/software/lua-cjson.php[Lua CSJON 2.0.0]::
+  - A C implementation with no dependencies on other libraries
+  - Tested with/without internal floating point conversion routines
 
 The following Lua implementations were used for this comparison:
-- Lua 5.1.4
-- LuaJIT 2.0.0-beta7
 
-The example JSON files used were taken from http://json.org/ and
-RFC 4627.
-
-		DKJSON 1.0	LuaJSON 1.0	LuaYAJL 2.0	CJSON 1.0.2
-== Decoding ==	Lua	LuaJIT	Lua	LuaJIT	Lua	LuaJIT	Lua	LuaJIT
-example1	1.0x	2.0x	3.4x	4.0x	7.1x	10.1x	13.2x	19.4x
-example2	1.0x	2.1x	3.5x	4.5x	6.6x	9.8x	12.7x	20.0x
-example3	1.0x	2.0x	3.9x	4.7x	7.0x	9.4x	13.2x	19.3x
-example4	1.0x	1.9x	3.7x	4.4x	7.4x	10.6x	11.8x	18.0x
-example5	1.0x	2.1x	4.0x	4.7x	7.7x	11.4x	14.7x	22.3x
-numbers		1.0x	2.1x	2.1x	3.4x	4.6x	5.7x	8.6x	10.4x
-rfc-example1	1.0x	2.0x	3.2x	4.2x	5.8x	8.2x	11.8x	17.7x
-rfc-example2	1.0x	2.0x	3.6x	4.5x	7.0x	9.3x	14.5x	20.5x
-types		1.0x	2.1x	2.3x	3.5x	4.9x	7.6x	10.7x	17.2x
-== Average ==> 	1.0x	2.0x	3.3x	4.2x	6.4x	9.1x	12.4x	18.3x
-
-== Encoding ==
-example1	1.0x	1.9x	0.6x	1.4x	3.5x	5.6x	23.1x	29.1x
-example2	1.0x	2.0x	0.5x	1.2x	3.0x	4.9x	23.4x	28.5x
-example3	1.0x	1.8x	0.6x	1.3x	3.0x	4.7x	13.3x	14.9x
-example4	1.0x	1.7x	0.7x	1.5x	4.2x	6.6x	15.4x	18.5x
-example5	1.0x	2.0x	0.6x	1.4x	3.4x	5.5x	22.7x	25.5x
-numbers		1.0x	2.4x	0.4x	0.9x	1.4x	2.1x	4.3x	4.6x
-rfc-example1	1.0x	1.9x	0.5x	1.2x	2.3x	3.6x	8.8x	9.6x
-rfc-example2	1.0x	1.9x	0.6x	1.3x	2.8x	4.3x	10.7x	10.7x
-types		1.0x	2.4x	0.3x	0.7x	1.4x	2.3x	11.7x	11.3x
-== Average ==> 	1.0x	2.0x	0.6x	1.2x	2.8x	4.4x	14.8x	17.0x
+- http://www.lua.org[Lua 5.1.4]
+- http://www.luajit.org[LuaJIT 2.0.0-beta9]
 
 
-Number conversion is a relatively expensive operation. Number heavy
-JSON will show less performance difference between libraries.
+Summary
+-------
+
+All libraries were built and used with their default settings.
+
+These results represent the number of JSON operations per second
+sustained by each module. All the results have been normalised against
+the pure Lua DKSJON implementation.
+
+.Decoding performance
+............................................................................
+             | DKJSON      +LPeg       | Lua YAJL   | Lua CJSON    +fpconv
+             | Lua  JIT    Lua    JIT  | Lua   JIT  | Lua   JIT    Lua   JIT
+example1     | 1x   2x     2.6x   3.4x | 7.1x  10x  | 14x   20x    14x   20x
+example2     | 1x   2.2x   2.9x   4.4x | 6.7x  9.9x | 14x   22x    14x   22x
+example3     | 1x   2.1x   3x     4.3x | 6.9x  9.3x | 14x   21x    15x   22x
+example4     | 1x   2x     2.5x   3.7x | 7.3x  10x  | 12x   19x    12x   20x
+example5     | 1x   2.2x   3x     4.5x | 7.8x  11x  | 16x   24x    16x   24x
+numbers      | 1x   2.2x   2.3x   4x   | 4.6x  5.5x | 8.9x  10x    13x   17x
+rfc-example1 | 1x   2.1x   2.8x   4.3x | 6.1x  8.1x | 13x   19x    14x   21x
+rfc-example2 | 1x   2.1x   3.1x   4.2x | 7.1x  9.2x | 15x   21x    17x   24x
+types        | 1x   2.2x   2.6x   4.3x | 5.3x  7.4x | 12x   20x    13x   21x
+= Average => | 1x   2.1x   2.7x   4.1x | 6.5x  9x   | 13x   20x    14x   21x
+............................................................................
+
+.Encoding performance
+.............................................................................
+             | DKJSON      +LPeg       | Lua YAJL   | Lua CJSON    +fpconv
+             | Lua  JIT    Lua    JIT  | Lua   JIT  | Lua   JIT    Lua   JIT
+example1     | 1x   1.8x   0.97x  1.6x | 3.1x  5.2x | 23x   29x    23x   29x
+example2     | 1x   2x     0.97x  1.7x | 2.6x  4.3x | 22x   28x    22x   28x
+example3     | 1x   1.9x   0.98x  1.6x | 2.8x  4.3x | 13x   15x    16x   18x
+example4     | 1x   1.7x   0.96x  1.3x | 3.9x  6.1x | 15x   19x    17x   21x
+example5     | 1x   2x     0.98x  1.7x | 2.7x  4.5x | 20x   23x    20x   23x
+numbers      | 1x   2.3x   1x     2.2x | 1.3x  1.9x | 3.8x  4.1x   4.2x  4.6x
+rfc-example1 | 1x   1.9x   0.97x  1.6x | 2.2x  3.2x | 8.5x  9.3x   11x   12x
+rfc-example2 | 1x   1.9x   0.98x  1.6x | 2.6x  3.9x | 10x   11x    17x   19x
+types        | 1x   2.2x   0.97x  2x   | 1.2x  1.9x | 11x   13x    12x   14x
+= Average => | 1x   1.9x   0.98x  1.7x | 2.5x  3.9x | 14x   17x    16x   19x
+.............................................................................
 
 Performance can vary widely between platforms and data sets. These
-results should only be considered as a rough guide.
+results should only be used as a rough guide.

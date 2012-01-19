@@ -50,8 +50,7 @@ rm -rf "$RPM_BUILD_ROOT"
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE NEWS performance.txt manual.html manual.txt rfc4627.txt THANKS
-%{_bindir}/*
+%doc LICENSE NEWS performance.html performance.txt manual.html manual.txt rfc4627.txt THANKS
 %{lualibdir}/*
 %{luadatadir}/*
 %{_bindir}/*
