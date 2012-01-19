@@ -115,7 +115,7 @@ function bench_file(filename)
 end
 
 -- Optionally load any custom configuration required for this module
-local success, data = pcall(util.file_load, string.format("bench-%s.lua", json_module))
+local success, data = pcall(util.file_load, ("bench-%s.lua"):format(json_module))
 if success then
     util.run_script(data, _G)
     configure(json)
@@ -124,7 +124,7 @@ end
 for i = 1, #arg do
     local results = bench_file(arg[i])
     for k, v in pairs(results) do
-        print(string.format("%s\t%s\t%d", arg[i], k, v))
+        print(("%s\t%s\t%d"):format(arg[i], k, v))
     end
 end
 

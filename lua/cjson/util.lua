@@ -63,10 +63,9 @@ local function serialise_table(value, indent, depth)
             if comma then
                 table.insert(fragment, "," .. spacing2)
             end
-            table.insert(fragment, string.format(
-                "[%s] = %s", serialise_value(k, indent2, depth),
-                             serialise_value(v, indent2, depth))
-            )
+            table.insert(fragment,
+                ("[%s] = %s"):format(serialise_value(k, indent2, depth),
+                                     serialise_value(v, indent2, depth)))
             comma = true
         end
     end
@@ -82,7 +81,7 @@ function serialise_value(value, indent, depth)
     if value == json.null then
         return "json.null"
     elseif type(value) == "string" then
-        return string.format("%q", value)
+        return ("%q"):format(value)
     elseif type(value) == "nil" or type(value) == "number" or
            type(value) == "boolean" then
         return tostring(value)
@@ -101,7 +100,7 @@ local function file_load(filename)
         local err
         file, err = io.open(filename)
         if file == nil then
-            error(string.format("Unable to read '%s': %s", filename, err))
+            error(("Unable to read '%s': %s"):format(filename, err))
         end
     end
     local data = file:read("*a")
@@ -125,7 +124,7 @@ local function file_save(filename, data)
         local err
         file, err = io.open(filename, "w")
         if file == nil then
-            error(string.format("Unable to write '%s': %s", filename, err))
+            error(("Unable to write '%s': %s"):format(filename, err))
         end
     end
     file:write(data)
@@ -187,7 +186,7 @@ local function run_test(testname, func, input, should_work, output)
         if status ~= nil then
             name = name .. statusmap[status]
         end
-        print(string.format("[%s] %s", name, serialise_value(value, false)))
+        print(("[%s] %s"):format(name, serialise_value(value, false)))
     end
 
     local result = { pcall(func, unpack(input)) }
@@ -201,8 +200,8 @@ local function run_test(testname, func, input, should_work, output)
     test_count_total = test_count_total + 1
 
     local teststatus = { [true] = "PASS", [false] = "FAIL" }
-    print(string.format("==> Test [%d] %s: %s",
-        test_count_total, testname, teststatus[correct]))
+    print(("==> Test [%d] %s: %s"):format(test_count_total, testname,
+                                          teststatus[correct]))
 
     status_line("Input", nil, input)
     if not correct then

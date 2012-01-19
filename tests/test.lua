@@ -22,7 +22,7 @@ local function gen_utf16_escaped()
     local count = 0
 
     local function append_escape(code)
-        local esc = string.format('\\u%04X', code)
+        local esc = ('\\u%04X'):format(code)
         table.insert(utf16_escaped, esc)
     end
 
@@ -388,7 +388,7 @@ local cjson_tests = {
       true, { false, 2, 10 } },
 }
 
-print(string.format("==> Testing Lua CJSON version %s\n", json._VERSION))
+print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))
 
 util.run_test_group(cjson_tests)
 
@@ -402,7 +402,7 @@ local pass, total = util.run_test_summary()
 if pass == total then
     print("==> Summary: all tests succeeded")
 else
-    print(string.format("==> Summary: %d/%d tests failed", total - pass, total))
+    print(("==> Summary: %d/%d tests failed"):format(total - pass, total))
     os.exit(1)
 end
 
