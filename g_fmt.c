@@ -90,6 +90,7 @@ fpconv_g_fmt(char *b, double x, int precision)
 		for(; decpt < 0; decpt++)
 			*b++ = '0';
 		while((*b++ = *s++));
+		b--;
 		}
 	else {
 		while((*b = *s++)) {
