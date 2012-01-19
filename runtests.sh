@@ -14,7 +14,7 @@ contextgrep() {
 do_tests() {
     echo
     cd tests
-    lua -e 'require "cjson"; print("Testing Lua CJSON version " .. cjson.version)'
+    lua -e 'print("Testing Lua CJSON version " .. require("cjson")._VERSION)'
     ./test.lua | contextgrep 'FAIL|Summary' 3 | grep -v PASS | cut -c -70
     cd ..
 }
@@ -50,10 +50,10 @@ make clean
 
 echo "===== Testing Makefile build ====="
 make
-cp cjson.so tests
+cp -r lua/cjson cjson.so tests
 do_tests
 make clean
-rm -f tests/cjson.so
+rm -rf tests/cjson{,.so}
 
 echo "===== Testing Cmake build ====="
 mkdir build
@@ -61,9 +61,9 @@ cd build
 cmake ..
 make
 cd ..
-cp build/cjson.so tests
+cp -r lua/cjson build/cjson.so tests
 do_tests
-rm -rf build tests/cjson.so
+rm -rf build tests/cjson{,.so}
 
 if [ "$PLATFORM" = "Linux" ]
 then
