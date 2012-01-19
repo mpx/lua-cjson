@@ -3,7 +3,7 @@
 %define luadatadir %{_datadir}/lua/%{luaver}
 
 Name:		lua-cjson
-Version:	1.1devel
+Version:	2.0devel
 Release:	1%{?dist}
 Summary:	A fast JSON encoding/parsing library for Lua
 

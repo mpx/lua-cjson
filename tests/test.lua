@@ -92,7 +92,7 @@ local cjson_tests = {
     -- Test API variables
     { "Check module name, version",
       function () return json._NAME, json._VERSION end, { },
-      true, { "cjson", "1.1devel" } },
+      true, { "cjson", "2.0devel" } },
 
     -- Test decoding simple types
     { "Decode string",
