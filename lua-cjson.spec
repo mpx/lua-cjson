@@ -44,6 +44,10 @@ make install-extra DESTDIR="$RPM_BUILD_ROOT" LUA_MODULE_DIR="%{luadatadir}" \
 rm -rf "$RPM_BUILD_ROOT"
 
 
+%preun
+/bin/rm -f "%{luadatadir}/cjson/tests/utf8.dat"
+
+
 %files
 %defattr(-,root,root,-)
 %doc LICENSE NEWS performance.txt manual.html manual.txt rfc4627.txt THANKS
