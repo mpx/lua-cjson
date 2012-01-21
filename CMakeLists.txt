@@ -6,10 +6,9 @@
 project(lua-cjson C)
 cmake_minimum_required(VERSION 2.6)
 
-option(ENABLE_CJSON_GLOBAL "Register cjson module table as a global variable - not recommended")
+option(ENABLE_CJSON_GLOBAL "Register a global cjson module table - not recommended")
 option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
-option(MULTIPLE_THREADS
-       "Build internal dtoa with support for multi-threaded applications - recommended" ON)
+option(MULTIPLE_THREADS "Support multi-threaded apps with internal fpconv - recommended" ON)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING
