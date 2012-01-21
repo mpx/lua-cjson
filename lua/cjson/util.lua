@@ -98,7 +98,7 @@ local function file_load(filename)
         file = io.stdin
     else
         local err
-        file, err = io.open(filename)
+        file, err = io.open(filename, "rb")
         if file == nil then
             error(("Unable to read '%s': %s"):format(filename, err))
         end
@@ -122,7 +122,7 @@ local function file_save(filename, data)
         file = io.stdout
     else
         local err
-        file, err = io.open(filename, "w")
+        file, err = io.open(filename, "wb")
         if file == nil then
             error(("Unable to write '%s': %s"):format(filename, err))
         end
