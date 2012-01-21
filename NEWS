@@ -1,4 +1,4 @@
-Version 2.0.0 (Jan ? 2012)
+Version 2.0.0 (Jan 22 2012)
 * Improved platform compatibility for strtod/sprintf locale workaround
 * Added option to build with David Gay's dtoa.c for improved performance
 * Added support for Lua 5.2
