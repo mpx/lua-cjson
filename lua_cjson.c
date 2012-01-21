@@ -321,6 +321,18 @@ static int json_cfg_encode_keep_buffer(lua_State *l)
     return 1;
 }
 
+#if defined(DISABLE_INVALID_NUMBERS) && !defined(USE_INTERNAL_FPCONV)
+void json_verify_invalid_number_setting(lua_State *l, int *setting)
+{
+    if (*setting == 1) {
+        *setting = 0;
+        luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
+    }
+}
+#else
+#define json_verify_invalid_number_setting(l, s)    do { } while(0)
+#endif
+
 static int json_cfg_encode_invalid_numbers(lua_State *l)
 {
     static const char *options[] = { "off", "on", "null", NULL };
@@ -328,12 +340,7 @@ static int json_cfg_encode_invalid_numbers(lua_State *l)
 
     json_enum_option(l, 1, &cfg->encode_invalid_numbers, options, 1);
 
-#if DISABLE_INVALID_NUMBERS
-    if (cfg->encode_invalid_numbers == 1) {
-        cfg->encode_invalid_numbers = 0;
-        luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
-    }
-#endif
+    json_verify_invalid_number_setting(l, &cfg->encode_invalid_numbers);
 
     return 1;
 }
@@ -344,12 +351,7 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
 
     json_enum_option(l, 1, &cfg->decode_invalid_numbers, NULL, 1);
 
-#if DISABLE_INVALID_NUMBERS
-    if (cfg->decode_invalid_numbers) {
-        cfg->decode_invalid_numbers = 0;
-        luaL_error(l, "Infinity, NaN, and/or hexadecimal numbers are not supported.");
-    }
-#endif
+    json_verify_invalid_number_setting(l, &cfg->encode_invalid_numbers);
 
     return 1;
 }

@@ -120,7 +120,8 @@ DISABLE_INVALID_NUMBERS:: Recommended on platforms where ++strtod++(3) /
   ++sprintf++(3) are not POSIX compliant (Eg, Windows MinGW). Prevents
   +cjson.encode_invalid_numbers+ and +cjson.decode_invalid_numbers+
   from being enabled. However, +cjson.encode_invalid_numbers+ may be
-  set to +"null"+.
+  set to +"null"+. This option is unnecessary and is ignored when
+  using built-in floating point conversion.
 
 
 Built-in dtoa() support
