@@ -5,7 +5,7 @@
 Name:		lua-cjson
 Version:	2.0devel
 Release:	1%{?dist}
-Summary:	A fast JSON encoding/parsing library for Lua
+Summary:	A fast JSON encoding/parsing module for Lua
 
 Group:		Development/Libraries
 License:	MIT
@@ -17,12 +17,12 @@ BuildRequires:	lua >= %{luaver}, lua-devel >= %{luaver}
 Requires:	lua >= %{luaver}
 
 %description
-The Lua CJSON library provides JSON support for Lua. It features:
+The Lua CJSON module provides JSON support for Lua. It features:
 - Fast, standards compliant encoding/parsing routines
 - Full support for JSON with UTF-8, including decoding surrogate pairs
 - Optional run-time support for common exceptions to the JSON specification
-  (NaN, Infinity,..)
-- No external dependencies
+  (infinity, NaN,..)
+- No dependencies on other libraries
 
 
 %prep
