@@ -6,7 +6,7 @@
 ##                          NaN, Infinity, hex.
 ##
 ## Optional built-in number conversion uses the following defines:
-## USE_INTERNAL_DTOA:       Use builtin strtod/dtoa for numeric conversions.
+## USE_INTERNAL_FPCONV:     Use builtin strtod/dtoa for numeric conversions.
 ## IEEE_BIG_ENDIAN:         Required on big endian architectures.
 ## MULTIPLE_THREADS:        Must be set when Lua CJSON may be used in a
 ##                          multi-threaded application. Requries _pthreads_.
@@ -54,7 +54,7 @@ LUA_BIN_DIR =       $(PREFIX)/bin
 
 ## Enable built in number conversion
 #FPCONV_OBJS =       g_fmt.o dtoa.o
-#CJSON_CFLAGS +=     -DUSE_INTERNAL_DTOA
+#CJSON_CFLAGS +=     -DUSE_INTERNAL_FPCONV
 
 ## Compile built in number conversion for big endian architectures
 #CJSON_CFLAGS +=     -DIEEE_BIG_ENDIAN

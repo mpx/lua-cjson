@@ -133,7 +133,7 @@ converting data number heavy data. However, this option reduces
 portability and is disabled by default.
 
 [horizontal]
-USE_INTERNAL_DTOA:: Enable internal number conversion routines.
+USE_INTERNAL_FPCONV:: Enable internal number conversion routines.
 IEEE_BIG_ENDIAN:: Must be set on big endian architectures.
 MULTIPLE_THREADS:: Must be set when Lua CJSON may be used in a
   multi-threaded application. Requries _pthreads_.

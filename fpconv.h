@@ -6,7 +6,7 @@
  * -1.7976931348623e+308 */
 # define FPCONV_G_FMT_BUFSIZE   32
 
-#ifdef USE_INTERNAL_DTOA
+#ifdef USE_INTERNAL_FPCONV
 static inline void fpconv_init()
 {
     /* Do nothing - not required */

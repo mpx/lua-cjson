@@ -7,7 +7,7 @@ project(lua-cjson C)
 cmake_minimum_required(VERSION 2.6)
 
 option(ENABLE_CJSON_GLOBAL "Register cjson module table as a global variable - not recommended")
-option(USE_INTERNAL_DTOA "Use internal strtod() / dtoa code for performance")
+option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
 option(MULTIPLE_THREADS
        "Build internal dtoa with support for multi-threaded applications - recommended" ON)
 
@@ -24,12 +24,12 @@ if(ENABLE_CJSON_GLOBAL)
     add_definitions(-DENABLE_CJSON_GLOBAL)
 endif()
 
-if(NOT USE_INTERNAL_DTOA)
+if(NOT USE_INTERNAL_FPCONV)
     # Use libc number conversion routines (strtod(), sprintf())
     set(FPCONV_SOURCES fpconv.c)
 else()
     # Use internal number conversion routines
-    add_definitions(-DUSE_INTERNAL_DTOA)
+    add_definitions(-DUSE_INTERNAL_FPCONV)
     set(FPCONV_SOURCES g_fmt.c dtoa.c)
 
     include(TestBigEndian)
