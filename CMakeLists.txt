@@ -6,7 +6,6 @@
 project(lua-cjson C)
 cmake_minimum_required(VERSION 2.6)
 
-option(ENABLE_CJSON_GLOBAL "Register a global cjson module table - not recommended")
 option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
 option(MULTIPLE_THREADS "Support multi-threaded apps with internal fpconv - recommended" ON)
 
@@ -18,10 +17,6 @@ endif()
 
 find_package(Lua51 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
-
-if(ENABLE_CJSON_GLOBAL)
-    add_definitions(-DENABLE_CJSON_GLOBAL)
-endif()
 
 if(NOT USE_INTERNAL_FPCONV)
     # Use libc number conversion routines (strtod(), sprintf())

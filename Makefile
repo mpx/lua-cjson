@@ -1,6 +1,5 @@
 ##### Available defines for CJSON_CFLAGS #####
 ##
-## ENABLE_CJSON_GLOBAL:     Register "cjson" module table as a global variable.
 ## USE_INTERNAL_ISINF:      Workaround for Solaris platforms missing isinf().
 ## DISABLE_INVALID_NUMBERS: Permanently disable invalid JSON numbers:
 ##                          NaN, Infinity, hex.

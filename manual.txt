@@ -138,8 +138,6 @@ issues, and enable non-default features. Some build methods may
 automatically set platform specific options if required. Other features
 should be enabled manually.
 
-ENABLE_CJSON_GLOBAL:: Register +cjson+ module table as a global variable
-  (not recommended).
 USE_INTERNAL_ISINF:: Workaround for Solaris platforms missing +isinf+.
 DISABLE_INVALID_NUMBERS:: Recommended on platforms where +strtod+ /
   +sprintf+ are not POSIX compliant (eg, Windows MinGW). Prevents
