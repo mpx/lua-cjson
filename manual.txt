@@ -173,6 +173,7 @@ Synopsis
 -- Module instantiation
 local cjson = require "cjson"
 local cjson2 = cjson.new()
+local cjson_safe = require "cjson.safe"
 
 -- Translate Lua value to/from JSON
 text = cjson.encode(value)
@@ -195,11 +196,20 @@ Module Instantiation
 ------------
 local cjson = require "cjson"
 local cjson2 = cjson.new()
+local cjson_safe = require "cjson.safe"
 ------------
 
 Import Lua CJSON via the Lua +require+ function. Lua CJSON does not
-register a global module table with the default
-<<build_options,build options>>.
+register a global module table.
+
+The +cjson+ module will throw an error during JSON conversion if any
+invalid data is encountered. Refer to <<cjson_encode,+cjson.encode+>>
+and <<cjson_decode,+cjson.decode+>> for details.
+
+The +cjson.safe+ module behaves identically to the +cjson+ module,
+except when errors are encountered during JSON conversion. On error, the
++cjson_safe.encode+ and +cjson_safe.decode+ functions will return
++nil+ followed by the error message.
 
 +cjson.new+ can be used to instantiate an independent copy of the Lua
 CJSON module. The new module has a separate persistent encoding buffer,
@@ -276,8 +286,8 @@ setting = cjson.decode_invalid_numbers([setting])
 -- "setting" must be a boolean. Default: true.
 ------------
 
-Lua CJSON may throw an error when trying to decode numbers not supported
-by the JSON specification. _Invalid numbers_ are defined as:
+Lua CJSON may generate an error when trying to decode numbers not
+supported by the JSON specification. _Invalid numbers_ are defined as:
 
 - infinity
 - not-a-number (NaN)
@@ -303,13 +313,13 @@ depth = cjson.decode_max_depth([depth])
 -- "depth" must be a positive integer. Default: 1000.
 ------------
 
-Lua CJSON will throw an error when parsing deeply nested JSON once the
-maximum array/object depth has been exceeded. This check prevents
+Lua CJSON will generate an error when parsing deeply nested JSON once
+the maximum array/object depth has been exceeded. This check prevents
 unnecessarily complicated JSON from slowing down the application, or
 crashing the application due to lack of process stack space.
 
-An error may be thrown before the depth limit is hit if Lua is unable to
-allocate more objects on the Lua stack.
+An error may be generated before the depth limit is hit if Lua is unable
+to allocate more objects on the Lua stack.
 
 By default, Lua CJSON will reject JSON with arrays and/or objects nested
 more than 1000 levels deep.
@@ -424,7 +434,7 @@ setting = cjson.encode_invalid_numbers([setting])
 -- "setting" must a boolean or "null". Default: false.
 ------------
 
-Lua CJSON may throw an error when encoding floating point numbers not
+Lua CJSON may generate an error when encoding floating point numbers not
 supported by the JSON specification (_invalid numbers_):
 
 - infinity
@@ -476,11 +486,11 @@ depth = cjson.encode_max_depth([depth])
 -- "depth" must be a positive integer. Default: 1000.
 ------------
 
-Once the maximum table depth has been exceeded Lua CJSON will throw an
-error. This prevents a deeply nested or recursive data structure from
+Once the maximum table depth has been exceeded Lua CJSON will generate
+an error. This prevents a deeply nested or recursive data structure from
 crashing the application.
 
-By default, Lua CJSON will throw an error when trying to encode data
+By default, Lua CJSON will generate an error when trying to encode data
 structures with more than 1000 nested tables.
 
 The current setting is always returned, and is only updated when an

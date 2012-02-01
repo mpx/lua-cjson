@@ -1310,6 +1310,35 @@ static void luaL_setfuncs (lua_State *l, const luaL_Reg *reg, int nup)
 }
 #endif
 
+/* Call target function in protected mode with all supplied args.
+ * Assumes target function only returns a single non-nil value.
+ * Convert and return thrown errors as: nil, "error message" */
+static int json_protect_conversion(lua_State *l)
+{
+    int err;
+
+    /* Deliberately throw an error for invalid arguments */
+    luaL_argcheck(l, lua_gettop(l) == 1, 1, "expected 1 argument");
+
+    /* pcall() the function stored as upvalue(1) */
+    lua_pushvalue(l, lua_upvalueindex(1));
+    lua_insert(l, 1);
+    err = lua_pcall(l, 1, 1, 0);
+    if (!err)
+        return 1;
+
+    if (err == LUA_ERRRUN) {
+        lua_pushnil(l);
+        lua_insert(l, -2);
+        return 2;
+    }
+
+    /* Since we are not using a custom error handler, the only remaining
+     * errors are memory related */
+    return luaL_error(l, "Memory allocation error in CJSON protected call");
+}
+
+/* Return cjson module table */
 static int lua_cjson_new(lua_State *l)
 {
     luaL_Reg reg[] = {
@@ -1349,6 +1378,27 @@ static int lua_cjson_new(lua_State *l)
     return 1;
 }
 
+/* Return cjson.safe module table */
+static int lua_cjson_safe_new(lua_State *l)
+{
+    const char *func[] = { "decode", "encode", NULL };
+    int i;
+
+    lua_cjson_new(l);
+
+    /* Fix new() method */
+    lua_pushcfunction(l, lua_cjson_safe_new);
+    lua_setfield(l, -2, "new");
+
+    for (i = 0; func[i]; i++) {
+        lua_getfield(l, -1, func[i]);
+        lua_pushcclosure(l, json_protect_conversion, 1);
+        lua_setfield(l, -2, func[i]);
+    }
+
+    return 1;
+}
+
 int luaopen_cjson(lua_State *l)
 {
     lua_cjson_new(l);
@@ -1360,6 +1410,14 @@ int luaopen_cjson(lua_State *l)
 #endif
 
     /* Return cjson table */
+    return 1;
+}
+
+int luaopen_cjson_safe(lua_State *l)
+{
+    lua_cjson_safe_new(l);
+
+    /* Return cjson.safe table */
     return 1;
 }
 

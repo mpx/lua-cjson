@@ -7,6 +7,7 @@
 -- Note: The output of this script is easier to read with "less -S"
 
 local json = require "cjson"
+local json_safe = require "cjson.safe"
 local util = require "cjson.util"
 
 local function gen_raw_octets()
@@ -386,6 +387,19 @@ local cjson_tests = {
     { "Check encode_sparse_array()",
       function (...) return json.encode_sparse_array(...) end, { },
       true, { false, 2, 10 } },
+
+    { "Encode (safe) simple value",
+      json_safe.encode, { true },
+      true, { "true" } },
+    { "Encode (safe) argument validation [throw error]",
+      json_safe.encode, { "arg1", "arg2" },
+      false, { "bad argument #1 to '?' (expected 1 argument)" } },
+    { "Decode (safe) error generation",
+      json_safe.decode, { "Oops" },
+      true, { nil, "Expected value but found invalid token at character 1" } },
+    { "Decode (safe) error generation after new()",
+      function(...) return json_safe.new().decode(...) end, { "Oops" },
+      true, { nil, "Expected value but found invalid token at character 1" } },
 }
 
 print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))
