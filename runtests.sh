@@ -5,17 +5,18 @@ PLATFORM="`uname -s`"
 
 set -e
 
-# Portable "ggrep -A" replacement
+# Portable "ggrep -A" replacement.
+# Work around Solaris awk record limit of 2559 bytes.
 # contextgrep PATTERN POST_MATCH_LINES
 contextgrep() {
-    awk "/$1/ { count = ($2 + 1) } count { count--; print }"
+    cut -c -2500 | awk "/$1/ { count = ($2 + 1) } count > 0 { count--; print }"
 }
 
 do_tests() {
     echo
     cd tests
     lua -e 'print("Testing Lua CJSON version " .. require("cjson")._VERSION)'
-    ./test.lua | contextgrep 'FAIL|Summary' 3 | grep -v PASS | cut -c -70
+    ./test.lua | contextgrep 'FAIL|Summary' 3 | grep -v PASS | cut -c -150
     cd ..
 }
 
