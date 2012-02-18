@@ -40,6 +40,7 @@ LUA_BIN_DIR =       $(PREFIX)/bin
 #CJSON_LDFLAGS =     -bundle -undefined dynamic_lookup
 
 ## Solaris
+#CC           =      gcc
 #CJSON_CFLAGS =      -fpic -DUSE_INTERNAL_ISINF
 
 ## Windows (MinGW)
@@ -49,9 +50,12 @@ LUA_BIN_DIR =       $(PREFIX)/bin
 #CJSON_LDFLAGS =     -shared -L$(PREFIX)/lib -llua51
 #LUA_BIN_SUFFIX =    .lua
 
-##### Use built in number conversion (optional) #####
+##### Number conversion configuration #####
 
-## Enable built in number conversion
+## Use Libc support for number conversion (default)
+FPCONV_OBJS =       fpconv.o
+
+## Use built in number conversion
 #FPCONV_OBJS =       g_fmt.o dtoa.o
 #CJSON_CFLAGS +=     -DUSE_INTERNAL_FPCONV
 
@@ -72,11 +76,10 @@ TEST_FILES =        README bench.lua genutf8.pl test.lua octets-escaped.dat \
 DATAPERM =          644
 EXECPERM =          755
 
-ASCIIDOC ?=         asciidoc
+ASCIIDOC =          asciidoc
 
 BUILD_CFLAGS =      -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
-FPCONV_OBJS ?=      fpconv.o
-OBJS :=             lua_cjson.o strbuf.o $(FPCONV_OBJS)
+OBJS =              lua_cjson.o strbuf.o $(FPCONV_OBJS)
 
 .PHONY: all clean install install-extra doc
 
