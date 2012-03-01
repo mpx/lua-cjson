@@ -57,6 +57,9 @@ rm -rf "$RPM_BUILD_ROOT"
 
 
 %changelog
+* Thu Mar 1 2012 Mark Pulford <mark@kyne.com.au> - 2.1.0-1
+- Update for 2.1.0
+
 * Sun Jan 22 2012 Mark Pulford <mark@kyne.com.au> - 2.0.0-1
 - Update for 2.0.0
 - Install lua2json / json2lua utilities

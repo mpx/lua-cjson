@@ -1,3 +1,7 @@
+Version 2.1.0 (Mar 1 2012)
+* Added cjson.safe module interface which returns nil after an error
+* Improved Makefile compatibility with Solaris make
+
 Version 2.0.0 (Jan 22 2012)
 * Improved platform compatibility for strtod/sprintf locale workaround
 * Added option to build with David Gay's dtoa.c for improved performance

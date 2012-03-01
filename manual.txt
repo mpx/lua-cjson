@@ -1,6 +1,6 @@
 = Lua CJSON 2.1devel Manual =
 Mark Pulford <mark@kyne.com.au>
-:revdate: January 22, 2012
+:revdate: 1st March 2012
 
 Overview
 --------
