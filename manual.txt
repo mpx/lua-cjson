@@ -1,4 +1,4 @@
-= Lua CJSON 2.0devel Manual =
+= Lua CJSON 2.1devel Manual =
 Mark Pulford <mark@kyne.com.au>
 :revdate: January 22, 2012
 
@@ -102,7 +102,7 @@ has been installed.
 Build and install the module via RPM:
 
 [source,sh]
-rpmbuild -tb lua-cjson-2.0devel.tar.gz
+rpmbuild -tb lua-cjson-2.1devel.tar.gz
 rpm -Uvh $LUA_CJSON_RPM
 
 
@@ -117,7 +117,7 @@ First, extract the Lua CJSON source package.
 Next, install the module:
 
 [source,sh]
-cd lua-cjson-2.0devel
+cd lua-cjson-2.1devel
 luarocks make
 
 [NOTE]
@@ -590,7 +590,7 @@ The name of the Lua CJSON module (+"cjson"+).
 _VERSION
 ~~~~~~~~
 
-The version number of the Lua CJSON module (+"2.0devel"+).
+The version number of the Lua CJSON module (+"2.1devel"+).
 
 
 null
