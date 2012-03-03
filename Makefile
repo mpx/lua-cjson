@@ -40,7 +40,8 @@ LUA_BIN_DIR =       $(PREFIX)/bin
 #CJSON_LDFLAGS =     -bundle -undefined dynamic_lookup
 
 ## Solaris
-#CC           =      gcc
+#PREFIX =            /home/user/opt
+#CC =                gcc
 #CJSON_CFLAGS =      -fpic -DUSE_INTERNAL_ISINF
 
 ## Windows (MinGW)
