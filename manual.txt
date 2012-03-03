@@ -290,7 +290,7 @@ Lua CJSON may generate an error when trying to decode numbers not
 supported by the JSON specification. _Invalid numbers_ are defined as:
 
 - infinity
-- not-a-number (NaN)
+- NaN
 - hexadecimal
 
 Available settings:
@@ -438,12 +438,13 @@ Lua CJSON may generate an error when encoding floating point numbers not
 supported by the JSON specification (_invalid numbers_):
 
 - infinity
-- not-a-number (NaN)
+- NaN
 
 Available settings:
 
-+true+:: Allow _invalid numbers_ to be encoded. This will generate
-  non-standard JSON, but this output is supported by some libraries.
++true+:: Allow _invalid numbers_ to be encoded using the Javascript
+  compatible values +NaN+ and +Infinity+. This will generate
+  non-standard JSON, but these values are supported by some libraries.
 +"null"+:: Encode _invalid numbers_ as a JSON +null+ value. This allows
   infinity and NaN to be encoded into valid JSON.
 +false+:: Throw an error when attempting to encode _invalid numbers_.
