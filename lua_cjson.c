@@ -68,6 +68,7 @@
 #define DEFAULT_ENCODE_INVALID_NUMBERS 0
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
+#define DEFAULT_ENCODE_ESCAPE_UTF8 0
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
 
 #ifdef DISABLE_INVALID_NUMBERS
@@ -414,6 +415,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_invalid_numbers = DEFAULT_ENCODE_INVALID_NUMBERS;
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
+    cfg->encode_escape_utf8 = DEFAULT_ENCODE_ESCAPE_UTF8;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
