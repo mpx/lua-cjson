@@ -5,3 +5,11 @@ notes
 packages
 tags
 tests/utf8.dat
+*.vcproj
+*.sln
+CMakeCache.txt
+CMakeFiles/*
+cjson.def
+cjson.exp
+*.dll*
+cmake_install.cmake
