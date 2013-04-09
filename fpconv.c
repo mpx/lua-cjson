@@ -35,6 +35,10 @@
 
 #include "fpconv.h"
 
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif
+
 /* Lua CJSON assumes the locale is the same for all threads within a
  * process and doesn't change after initialisation.
  *
@@ -124,7 +128,7 @@ double fpconv_strtod(const char *nptr, char **endptr)
     /* Duplicate number into buffer */
     if (buflen >= FPCONV_G_FMT_BUFSIZE) {
         /* Handle unusually large numbers */
-        buf = malloc(buflen + 1);
+        buf = (char *)malloc(buflen + 1);
         if (!buf) {
             fprintf(stderr, "Out of memory");
             abort();
@@ -196,10 +200,12 @@ int fpconv_g_fmt(char *str, double num, int precision)
     return len;
 }
 
+#ifndef USE_INTERNAL_FPCONV
 void fpconv_init()
 {
     fpconv_update_locale();
 }
+#endif
 
 /* vi:ai et sw=4 ts=4:
  */
