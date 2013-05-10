@@ -8,6 +8,10 @@ cmake_minimum_required(VERSION 2.6)
 
 option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
 option(MULTIPLE_THREADS "Support multi-threaded apps with internal fpconv - recommended" ON)
+option(USE_LUA "Use Lua (also called 'C' Lua) version 5.1 includes (default)" ON)
+option(USE_LUAJIT "Use LuaJIT includes instead of 'C' Lua ones (recommended, if you're using LuaJIT, but disabled by default)")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -15,7 +19,19 @@ if(NOT CMAKE_BUILD_TYPE)
         FORCE)
 endif()
 
-find_package(Lua51 REQUIRED)
+if(USE_LUAJIT)
+# Find luajit
+        find_package(LuaJIT REQUIRED)
+        set(USE_LUA OFF)
+# / Find lua
+endif()
+
+if(USE_LUA)
+# Find lua
+        find_package(Lua51 REQUIRED)
+# / Find lua
+endif()
+
 include_directories(${LUA_INCLUDE_DIR})
 
 if(NOT USE_INTERNAL_FPCONV)
