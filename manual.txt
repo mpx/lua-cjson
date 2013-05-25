@@ -302,6 +302,30 @@ Available settings:
 The current setting is always returned, and is only updated when an
 argument is provided.
 
+[[decode_numbers_as_strings]]
+decode_numbers_as_strings
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,lua]
+------------
+setting = cjson.decode_numbers_as_strings([setting])
+-- "setting" must be a boolean. Default: false.
+------------
+
+Lua CJSON will parse numbers as strings and return them as strings if
+this setting is true.
+
+A typical use case may be for JSON with 64bit numbers and you don't want
+to loose precision for those fields as they're converted to Lua_number
+which is typically a double.
+
+Available settings:
+
++true+:: Decode _numbers_ as a string.
++false+:: Decode _numbers_ as Lua numbers. This is the default setting.
+
+The current setting is always returned, and is only updated when an
+argument is provided.
 
 [[decode_max_depth]]
 decode_max_depth
