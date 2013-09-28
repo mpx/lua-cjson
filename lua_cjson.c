@@ -46,6 +46,10 @@
 #include "strbuf.h"
 #include "fpconv.h"
 
+#ifdef ENABLE_DTRACE
+#include "cjson_dtrace.h"
+#endif
+
 #ifndef CJSON_MODNAME
 #define CJSON_MODNAME   "cjson"
 #endif
@@ -708,6 +712,11 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
 
 static int json_encode(lua_State *l)
 {
+
+    if (CJSON_ENCODE_START_ENABLED()) {
+        CJSON_ENCODE_START();
+    };
+      
     json_config_t *cfg = json_fetch_config(l);
     strbuf_t local_encode_buf;
     strbuf_t *encode_buf;
@@ -734,6 +743,10 @@ static int json_encode(lua_State *l)
     if (!cfg->encode_keep_buffer)
         strbuf_free(encode_buf);
 
+    if (CJSON_ENCODE_DONE_ENABLED()) {
+        CJSON_ENCODE_DONE(len, json);
+    };
+      
     return 1;
 }
 
