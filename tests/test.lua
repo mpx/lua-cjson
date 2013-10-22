@@ -199,6 +199,29 @@ local cjson_tests = {
       json.encode, { testdata.deeply_nested_data },
       false, { "Cannot serialise, excessive nesting (1001)" } },
 
+    -- Test encoding with metatable.__tojson
+    { "Encode a table that has a __tojson",
+      function()
+          local mt = {__tojson=function() return "asdf" end}
+          local t = {}
+          setmetatable(t, mt)
+          return json.encode(t)
+      end, {}, true, { "asdf" } },
+    { "Encode multiple tables that have __tojson",
+      function()
+          local mt = {__tojson=function() return "asdf" end}
+          local t = {}
+          setmetatable(t, mt)
+          return json.encode({c={t,t,t}})
+      end, {}, true, { '{"c":[asdf,asdf,asdf]}' } },
+    { "Encode a table that has a metatable without a __tojson",
+      function()
+          local mt = {a=1}
+          local t = {b=1}
+          setmetatable(t, mt)
+          return json.encode(t)
+      end, {}, true, { '{"b":1}' } },
+
     -- Test encoding simple types
     { "Encode null",
       json.encode, { json.null }, true, { 'null' } },

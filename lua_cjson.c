@@ -662,6 +662,26 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
     strbuf_append_char(json, '}');
 }
 
+static int json_append_tojson_invoke(lua_State* l, json_config_t *cfg, strbuf_t* json) {
+    // [data]
+    if(lua_getmetatable(l, -1)) { // [data, mt]
+        lua_getfield(l, -1, "__tojson"); // [data, mt, __tojson]
+        if(lua_type(l,-1) == LUA_TFUNCTION) {
+            lua_pushvalue(l, -3); // [data, mt, __tojson, data]
+            lua_call(l, 1, 1); // [data, mt, string]
+            if(lua_type(l,-1) != LUA_TSTRING) {
+                json_encode_exception(l, cfg, json, -1, "__tojson(v) did not return a string");
+                /* never returns */
+            }
+            strbuf_append_string(json, lua_tolstring(l, -1, 0));
+            lua_settop(l, -3);
+            return 1;
+        }
+        lua_settop(l, -3);
+    }
+    return 0;
+}
+
 /* Serialise Lua data into JSON string. */
 static void json_append_data(lua_State *l, json_config_t *cfg,
                              int current_depth, strbuf_t *json)
@@ -682,6 +702,8 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
             strbuf_append_mem(json, "false", 5);
         break;
     case LUA_TTABLE:
+        if(json_append_tojson_invoke(l, cfg, json)) { break; }
+
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
         len = lua_array_length(l, cfg, json);
