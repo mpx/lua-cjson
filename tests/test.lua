@@ -176,6 +176,13 @@ local cjson_tests = {
       json.decode, { string.rep("[", 1100) .. '1100' .. string.rep("]", 1100)},
       false, { "Found too many nested data structures (1001) at character 1001" } },
 
+    { "Decode array syntax sets mt.__jsontype = 'array'",
+      function()
+          local t = json.decode("[]")
+          return getmetatable(t).__jsontype == 'array'
+      end, { },
+      true, { true } },
+
     -- Test encoding nested tables
     { "Set encode_max_depth(5)",
       json.encode_max_depth, { 5 }, true, { 5 } },

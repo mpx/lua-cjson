@@ -1285,6 +1285,20 @@ static void json_decode_descend(lua_State *l, json_parse_t *json, int slots)
         json->current_depth, json->ptr - json->data);
 }
 
+static void json_set_metatable_field_string(lua_State* l, char* k, char* v)
+{
+    // [table]
+    if(!lua_getmetatable(l, -1)) {
+        lua_newtable(l); // [table, mt]
+        lua_pushvalue(l, -1); // [table, mt, mt]
+        lua_setmetatable(l, -3); // [table, mt]
+    }
+    // [table, mt]
+    lua_pushstring(l, v); // [table, mt, v]
+    lua_setfield(l, -2, k); // [table, mt]
+    lua_pop(l, 1); // [table]
+}
+
 static void json_parse_object_context(lua_State *l, json_parse_t *json)
 {
     json_token_t token;
@@ -1294,6 +1308,7 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
     json_decode_descend(l, json, 3);
 
     lua_newtable(l);
+    json_set_metatable_field_string(l, "__jsontype", "object");
 
     json_next_token(json, &token);
 
@@ -1346,6 +1361,7 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
     json_decode_descend(l, json, 2);
 
     lua_newtable(l);
+    json_set_metatable_field_string(l, "__jsontype", "array");
 
     json_next_token(json, &token);
 
