@@ -433,6 +433,13 @@ local cjson_tests = {
       json.encode, { function () end },
       true, { "FOO" } },
 
+    -- Test sorted keys
+    { "encode_sort_keys(true)",
+      json.encode_sort_keys, { true }, true, { } },
+    { "test sorted encode",
+     json.encode, { {a=1,b=1,c=1,d=1,e=1,f=1,g=1,h=1,i=1,j=1,k=1,l=1,m=1,n=1,o=1} },
+      true, { '{"a":1,"b":1,"c":1,"d":1,"e":1,"f":1,"g":1,"h":1,"i":1,"j":1,"k":1,"l":1,"m":1,"n":1,"o":1}' } },
+
 }
 
 print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))

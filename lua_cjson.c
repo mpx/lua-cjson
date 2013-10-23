@@ -71,6 +71,7 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
+#define DEFAULT_ENCODE_SORT_KEYS 0
 
 #define CJSON_REGISTRY_INVALID_TYPE_ENCODER 1
 
@@ -129,6 +130,7 @@ typedef struct {
     int encode_invalid_numbers;     /* 2 => Encode as "null" */
     int encode_number_precision;
     int encode_keep_buffer;
+    int encode_sort_keys;
 
     int decode_invalid_numbers;
     int decode_max_depth;
@@ -350,6 +352,13 @@ static int json_cfg_encode_invalid_numbers(lua_State *l)
     return 1;
 }
 
+static int json_cfg_encode_sort_keys(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+    json_enum_option(l, 1, &cfg->encode_sort_keys, NULL, 1);
+    return 0;
+}
+
 static int json_cfg_decode_invalid_numbers(lua_State *l)
 {
     json_config_t *cfg = json_arg_init(l, 1);
@@ -427,6 +436,7 @@ static void json_create_config(lua_State *l)
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
+    cfg->encode_sort_keys = DEFAULT_ENCODE_SORT_KEYS;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
     strbuf_init(&cfg->encode_buf, 0);
@@ -699,6 +709,67 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
     strbuf_append_char(json, '}');
 }
 
+static void json_append_object_sortkeys(lua_State *l, json_config_t *cfg,
+                               int current_depth, strbuf_t *json)
+{
+    // [data]
+    lua_createtable(l, 1024, 0); // [data, keytable]
+
+    int n = 0;
+    lua_pushnil(l); // [data, keytable, nil]
+    while(lua_next(l, -3) != 0) {
+        // [data, keytable, key, value]
+        lua_pop(l, 1); // [data, keytable, key]
+        lua_pushvalue(l, -1); // [data, keytable, key, key]
+        lua_rawseti(l, -3, ++n); // [data, keytable, key]
+    }
+    // [data, keytable]
+
+    lua_pushvalue(l, -1); // [data, keytable, keytable]
+    lua_getglobal(l, "table"); // [data, keytable, keytable, _G.table]
+    lua_getfield(l, -1, "sort"); // [data, keytable, keytable, _G.table, _G.table.sort]
+    lua_insert(l, -3); // [data, keytable, _G.table.sort, keytable, _G.table]
+    lua_pop(l, 1); // [data, keytable, _G.table.sort, keytable]
+    lua_call(l, 1, 0); // [data, keytable]
+
+    int comma, keytype;
+
+    /* Object */
+    strbuf_append_char(json, '{');
+
+    lua_pushnil(l); // [data, keytable, nil]
+    comma = 0;
+    while (lua_next(l, -2) != 0) {
+        // [data, keytable, n, key]
+        if (comma)
+            strbuf_append_char(json, ',');
+        else
+            comma = 1;
+
+        keytype = lua_type(l, -1);
+        if (keytype == LUA_TNUMBER) {
+            strbuf_append_char(json, '"');
+            json_append_number(l, cfg, json, -1);
+            strbuf_append_mem(json, "\":", 2);
+        } else if (keytype == LUA_TSTRING) {
+            json_append_string(l, json, -1);
+            strbuf_append_char(json, ':');
+        } else {
+            json_encode_exception(l, cfg, json, -1, "table key must be a number or string");
+            /* never returns */
+        }
+
+        // [data, keytable, n, key]
+        lua_gettable(l, -4); // [data, keytable, n, data[key]]
+        json_append_data(l, cfg, current_depth, json);
+        lua_pop(l, 1); // [data, keytable, n]
+    }
+    // [data, keytable]
+    lua_pop(l, 1); // [data]
+
+    strbuf_append_char(json, '}');
+}
+
 static int json_append_tojson_invoke(lua_State* l, json_config_t *cfg, strbuf_t* json) {
     // [data]
     if(lua_getmetatable(l, -1)) { // [data, mt]
@@ -746,8 +817,13 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         len = lua_array_length(l, cfg, json);
         if (len > 0)
             json_append_array(l, cfg, current_depth, json, len);
-        else
-            json_append_object(l, cfg, current_depth, json);
+        else {
+            if(cfg->encode_sort_keys) {
+                json_append_object_sortkeys(l, cfg, current_depth, json);
+            } else {
+                json_append_object(l, cfg, current_depth, json);
+            }
+        }
         break;
     case LUA_TNIL:
         strbuf_append_mem(json, "null", 4);
@@ -1428,6 +1504,7 @@ static int lua_cjson_new(lua_State *l)
         { "decode_max_depth", json_cfg_decode_max_depth },
         { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
+        { "encode_sort_keys", json_cfg_encode_sort_keys },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
         { "set_invalid_type_encoder", json_cfg_set_invalid_type_encoder },
