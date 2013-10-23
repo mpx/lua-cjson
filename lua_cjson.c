@@ -54,6 +54,9 @@
 #define CJSON_VERSION   "2.1devel"
 #endif
 
+// convention is to use a pointer to anything in our C module for unique lightuserdata
+#define CJSON_LIGHTUSERDATA ((void*)json_token_type_name)
+
 /* Workaround for Solaris platforms missing isinf() */
 #if !defined(isinf) && (defined(USE_INTERNAL_ISINF) || defined(MISSING_ISINF))
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
@@ -68,6 +71,8 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
+
+#define CJSON_REGISTRY_INVALID_TYPE_ENCODER 1
 
 #ifdef DISABLE_INVALID_NUMBERS
 #undef DEFAULT_DECODE_INVALID_NUMBERS
@@ -354,6 +359,38 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
     json_verify_invalid_number_setting(l, &cfg->encode_invalid_numbers);
 
     return 1;
+}
+
+static void json_push_registry_table(lua_State *l)
+{
+    lua_pushlightuserdata(l, CJSON_LIGHTUSERDATA);
+    lua_rawget(l, LUA_REGISTRYINDEX);
+}
+
+static int json_cfg_set_invalid_type_encoder(lua_State *l)
+{
+    luaL_checktype(l, 1, LUA_TFUNCTION); // [func]
+    lua_pushnumber(l, CJSON_REGISTRY_INVALID_TYPE_ENCODER); // [func, idx]
+    json_push_registry_table(l); // [func, idx, cjson_registry]
+    lua_insert(l, -3); // [cjson_registry, func, idx]
+    lua_insert(l, -2); // [cjson_registry, idx, func]
+    lua_rawset(l, -3); // [cjson_registry]
+    lua_pop(l, 1);
+    return 0;
+}
+
+static int json_push_invalid_type_encoder(lua_State *l)
+{
+    json_push_registry_table(l); // [cjson_registry]
+    lua_pushnumber(l, CJSON_REGISTRY_INVALID_TYPE_ENCODER); // [cjson_registry, idx]
+    lua_rawget(l, -2); // [cjson_registry, invalid_type_encoder]
+    lua_remove(l, -2); // [invalid_type_encoder]
+    if(lua_type(l,-1) == LUA_TNIL) {
+        lua_pop(l, 1);
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 static int json_destroy_config(lua_State *l)
@@ -723,8 +760,20 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     default:
         /* Remaining types (LUA_TFUNCTION, LUA_TUSERDATA, LUA_TTHREAD,
          * and LUA_TLIGHTUSERDATA) cannot be serialised */
-        json_encode_exception(l, cfg, json, -1, "type not supported");
-        /* never returns */
+        if(json_push_invalid_type_encoder(l)) { // [data, invalid_type_encoder]
+            lua_pushvalue(l, -2); // [data, invalid_type_encoder, data]
+            lua_call(l, 1, 1); // [data, encoder_result]
+            if(lua_type(l,-1) != LUA_TSTRING) {
+                json_encode_exception(l, cfg, json, -1, "invalid_type_encoder(v) did not return a string");
+                /* never returns */
+            } else {
+                strbuf_append_string(json, lua_tolstring(l, -1, 0));
+                lua_pop(l, 1); // [data]
+            }
+        } else {
+            json_encode_exception(l, cfg, json, -1, "type not supported");
+            /* never returns */
+        }
     }
 }
 
@@ -1381,6 +1430,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+        { "set_invalid_type_encoder", json_cfg_set_invalid_type_encoder },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };
@@ -1404,6 +1454,11 @@ static int lua_cjson_new(lua_State *l)
     lua_setfield(l, -2, "_NAME");
     lua_pushliteral(l, CJSON_VERSION);
     lua_setfield(l, -2, "_VERSION");
+
+    /* Create our registry table */
+    lua_pushlightuserdata(l, CJSON_LIGHTUSERDATA);
+    lua_newtable(l);
+    lua_rawset(l, LUA_REGISTRYINDEX);
 
     return 1;
 }

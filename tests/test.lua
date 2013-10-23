@@ -425,6 +425,14 @@ local cjson_tests = {
     { "Decode (safe) error generation after new()",
       function(...) return json_safe.new().decode(...) end, { "Oops" },
       true, { nil, "Expected value but found invalid token at character 1" } },
+
+    -- Test encoding invalid type callback
+    { "set_invalid_type_encoder(...)",
+      json.set_invalid_type_encoder, { function() return "FOO" end }, true, { } },
+    { "Encode Lua function with invalid_type_encoder",
+      json.encode, { function () end },
+      true, { "FOO" } },
+
 }
 
 print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))
