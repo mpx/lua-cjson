@@ -25,6 +25,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#ifdef _MSC_VER
+#define inline __inline
+#endif
+
 /* Size: Total bytes allocated to *buf
  * Length: String length, excluding optional NULL terminator.
  * Increment: Allocation increments when resizing the string buffer.

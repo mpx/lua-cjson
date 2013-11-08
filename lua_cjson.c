@@ -59,6 +59,12 @@
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
 #endif
 
+/* Workaround for MSVC */
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#define strncasecmp strnicmp
+#endif
+
 #define DEFAULT_SPARSE_CONVERT 0
 #define DEFAULT_SPARSE_RATIO 2
 #define DEFAULT_SPARSE_SAFE 10
@@ -461,7 +467,7 @@ static void json_encode_exception(lua_State *l, json_config_t *cfg, strbuf_t *js
 static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
 {
     const char *escstr;
-    int i;
+    size_t i;
     const char *str;
     size_t len;
 
