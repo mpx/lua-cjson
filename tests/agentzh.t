@@ -39,3 +39,14 @@ print(cjson.encode({dogs = {}}))
 {}
 {"dogs":{}}
 
+
+
+=== TEST 4: & in JSON
+--- lua
+local cjson = require "cjson"
+local a="[\"a=1&b=2\"]"
+local b=cjson.decode(a)
+print(cjson.encode(b))
+--- out
+["a=1&b=2"]
+
