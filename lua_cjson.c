@@ -45,8 +45,8 @@
 
 #ifdef _MSC_VER
 # define inline __inline
-#else
-# define inline inline
+# define snprintf _snprintf 
+# define strncasecmp _strnicmp 
 #endif
 
 #include "strbuf.h"

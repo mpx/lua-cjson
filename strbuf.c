@@ -29,8 +29,6 @@
 
 #ifdef _MSC_VER
 # define inline __inline
-#else
-# define inline inline
 #endif
 
 #include "strbuf.h"
