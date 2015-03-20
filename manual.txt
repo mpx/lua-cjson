@@ -162,6 +162,19 @@ MULTIPLE_THREADS:: Must be set if Lua CJSON may be used in a
   multi-threaded application. Requires the _pthreads_ library.
 
 
+Application Specific Notes
+--------------------------
+
+Nginx
+~~~~~
+
+If you are going to use lua-cjson in combination with Nginx then either
+- compile lua-cjson with MULTIPLE_THREADS enabled, or
+- call json.encode_keep_buffer = false in your application code.
+
+Not doing this, might lead to a segfault under high-load.
+
+
 API (Functions)
 ---------------
 
