@@ -89,6 +89,9 @@ local NaN = math.huge * 0;
 
 local testdata = load_testdata()
 
+local empty_array = {}
+setmetatable(empty_array, json.as_array)
+
 local cjson_tests = {
     -- Test API variables
     { "Check module name, version",
@@ -212,6 +215,10 @@ local cjson_tests = {
       json.encode, { 10 }, true, { '10' } },
     { "Encode string",
       json.encode, { "hello" }, true, { '"hello"' } },
+    { "Encode empty table as array",
+      json.encode, { empty_array }, true, { '[]' } },
+    { "Encode empty table as table",
+      json.encode, { {} }, true, { '{}' } },
     { "Encode Lua function [throw error]",
       json.encode, { function () end },
       false, { "Cannot serialise function: type not supported" } },

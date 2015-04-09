@@ -74,6 +74,8 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 0
 #endif
 
+#define MT_AS_ARRAY "MT_AS_ARRAY"
+
 typedef enum {
     T_OBJ_BEGIN,
     T_OBJ_END,
@@ -687,8 +689,22 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         len = lua_array_length(l, cfg, json);
         if (len > 0)
             json_append_array(l, cfg, current_depth, json, len);
-        else
-            json_append_object(l, cfg, current_depth, json);
+        else {
+            int is_array = 0;
+            int got = lua_getmetatable(l, -1);
+            if (got > 0) {
+                luaL_getmetatable(l, MT_AS_ARRAY);
+                is_array = lua_rawequal(l, -1, -2);
+                lua_pop(l, 2);
+            }
+
+            if (is_array) {
+                json_append_array(l, cfg, current_depth, json, 0);
+            }
+            else {
+                json_append_object(l, cfg, current_depth, json);
+            }
+        }
         break;
     case LUA_TNIL:
         strbuf_append_mem(json, "null", 4);
@@ -1376,6 +1392,9 @@ static int lua_cjson_new(lua_State *l)
     /* Set cjson.null */
     lua_pushlightuserdata(l, NULL);
     lua_setfield(l, -2, "null");
+
+    luaL_newmetatable(l, MT_AS_ARRAY);
+    lua_setfield(l, -2, "as_array");
 
     /* Set module name / version fields */
     lua_pushliteral(l, CJSON_MODNAME);
