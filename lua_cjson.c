@@ -497,25 +497,63 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
     max = 0;
     items = 0;
 
-    lua_pushnil(l);
-    /* table, startkey */
-    while (lua_next(l, -2) != 0) {
-        /* table, key, value */
-        if (lua_type(l, -2) == LUA_TNUMBER &&
-            (k = lua_tonumber(l, -2))) {
-            /* Integer >= 1 ? */
-            if (floor(k) == k && k >= 1) {
-                if (k > max)
-                    max = k;
-                items++;
-                lua_pop(l, 1);
-                continue;
+    if (luaL_getmetafield(l, -1, "__pairs")) {
+        int index = lua_gettop(l) - 1;
+        int type;
+        lua_pushvalue(l, -2);
+        lua_call(l, 1, 3);
+        lua_newtable(l);
+        lua_replace(l, index);
+        while (1) {
+            lua_pushvalue(l, -2);
+            lua_pushvalue(l, -2);
+            lua_copy(l, -5, -3);
+            lua_call(l, 2, 2);
+            type = lua_type(l, -2);
+            if (type == LUA_TNIL)
+                break;
+            if (items >= 0) {
+                if (type == LUA_TNUMBER &&
+                    (k = lua_tonumber(l, -2))) {
+                    if (floor(k) == k && k >= -1) {
+                        if (k > max)
+                            max = k;
+                        items++;
+                    } else {
+                        items = -1;
+                    }
+                } else {
+                    items = -1;
+                }
             }
+            lua_pushvalue(l, -1);
+            lua_copy(l, -3, -2);
+            lua_rawset(l, index);
         }
+        lua_settop(l, index);
+        if (items < 0)
+            return -1;
+    } else {
+        lua_pushnil(l);
+        /* table, startkey */
+        while (lua_next(l, -2) != 0) {
+            /* table, key, value */
+            if (lua_type(l, -2) == LUA_TNUMBER &&
+                (k = lua_tonumber(l, -2))) {
+                /* Integer >= 1 ? */
+                if (floor(k) == k && k >= 1) {
+                    if (k > max)
+                        max = k;
+                    items++;
+                    lua_pop(l, 1);
+                    continue;
+                }
+            }
 
-        /* Must not be an array (non integer key) */
-        lua_pop(l, 2);
-        return -1;
+            /* Must not be an array (non integer key) */
+            lua_pop(l, 2);
+            return -1;
+        }
     }
 
     /* Encode excessively sparse arrays as objects (if enabled) */
