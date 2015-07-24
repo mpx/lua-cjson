@@ -74,6 +74,10 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 0
 #endif
 
+#ifdef _WIN32
+#define strncasecmp _strnicmp
+#endif
+
 typedef enum {
     T_OBJ_BEGIN,
     T_OBJ_END,
