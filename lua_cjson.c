@@ -600,8 +600,17 @@ static void json_append_array(lua_State *l, json_config_t *cfg, int current_dept
 static void json_append_number(lua_State *l, json_config_t *cfg,
                                strbuf_t *json, int lindex)
 {
-    double num = lua_tonumber(l, lindex);
     int len;
+#if LUA_VERSION_NUM >= 503
+    if (lua_isinteger(l, lindex)) {
+        lua_Integer num = lua_tointeger(l, lindex);
+        strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE); /* max length of int64 is 19 */
+        len = lua_integer2str(strbuf_empty_ptr(json), num);
+        strbuf_extend_length(json, len);
+        return;
+    }
+#endif
+    double num = lua_tonumber(l, lindex);
 
     if (cfg->encode_invalid_numbers == 0) {
         /* Prevent encoding invalid numbers */
