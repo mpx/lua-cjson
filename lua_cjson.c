@@ -503,20 +503,13 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
     max = -1;
     items = 0;
 
-    if ( lua_getmetatable(l, -1) ) {
-        int is_array, has_is_array;
-
-        lua_pushliteral(l, "__is_cjson_array");
+    if (lua_getmetatable(l, -1)) {
+        lua_pushliteral(l, "__name");
         lua_rawget(l, -2);
-        has_is_array = lua_isboolean(l, -1);
-        is_array = has_is_array && lua_toboolean(l, -1);
-        lua_pop(l, 2);
-
-        if ( has_is_array && ! is_array ) {
-            return -1;
-        } else {
+        if (lua_isstring(l, -1) && strcmp("array", lua_tostring(l, -1)) == 0) {
             max = 0;
         }
+        lua_pop(l, 2);
     }
 
     lua_pushnil(l);
@@ -704,6 +697,16 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
             strbuf_append_mem(json, "false", 5);
         break;
     case LUA_TTABLE:
+        if (lua_getmetatable(l, -1)) {
+            lua_pushliteral(l, "__name");
+            lua_rawget(l, -2);
+            if (lua_isstring(l, -1) && strcmp("null", lua_tostring(l, -1)) == 0) {
+                strbuf_append_mem(json, "null", 4);
+                lua_pop(l, 2);
+                break;
+            }
+            lua_pop(l, 2);
+        }
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
         len = lua_array_length(l, cfg, json);
@@ -1227,13 +1230,7 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
     /* Handle empty arrays */
     if (token.type == T_ARR_END) {
         // Mark as array:
-        luaL_getmetatable(l, "cjson.array");
-        if ( lua_isnil(l, -1) ) {
-            lua_pop(l, 1);
-            luaL_newmetatable(l, "cjson.array");
-            lua_pushboolean(l, 1);
-            lua_setfield(l, -2, "__is_cjson_array");
-        }
+        luaL_getmetatable(l, "array");
         lua_setmetatable(l, -2);
 
         json_decode_ascend(json);
@@ -1280,9 +1277,9 @@ static void json_process_value(lua_State *l, json_parse_t *json,
         break;;
     case T_NULL:
         /* In Lua, setting "t[k] = nil" will delete k from the table.
-         * Hence a NULL pointer lightuserdata object is used instead */
-        lua_pushlightuserdata(l, NULL);
-        break;;
+         * Hence a NULL userdata object is used instead */
+        luaL_getmetatable(l, "null");
+        break;
     default:
         json_throw_parse_error(l, json, "value", token);
     }
@@ -1378,6 +1375,12 @@ static int json_protect_conversion(lua_State *l)
     return luaL_error(l, "Memory allocation error in CJSON protected call");
 }
 
+static int json_null_tostring(lua_State *l)
+{
+    lua_pushliteral(l, "null");
+    return 1;
+}
+
 /* Return cjson module table */
 static int lua_cjson_new(lua_State *l)
 {
@@ -1398,6 +1401,24 @@ static int lua_cjson_new(lua_State *l)
     /* Initialise number conversions */
     fpconv_init();
 
+    /* Initialize "null" */
+    if ( luaL_newmetatable(l, "null") ) {
+        lua_createtable(l, 0, 2);
+        lua_pushliteral(l, "null");
+        lua_setfield(l, -2, "__name");
+        lua_pushcfunction(l, json_null_tostring);
+        lua_setfield(l, -2, "__tostring");
+        lua_setmetatable(l, -2);
+    }
+    lua_pop(l, 1);
+
+    /* Initialize "array" metatable */
+    if ( luaL_newmetatable(l, "array") ) {
+        lua_pushliteral(l, "array");
+        lua_setfield(l, -2, "__name");
+    }
+    lua_pop(l, 1);
+
     /* cjson module table */
     lua_newtable(l);
 
@@ -1406,7 +1427,7 @@ static int lua_cjson_new(lua_State *l)
     luaL_setfuncs(l, reg, 1);
 
     /* Set cjson.null */
-    lua_pushlightuserdata(l, NULL);
+    luaL_getmetatable(l, "null");
     lua_setfield(l, -2, "null");
 
     /* Set module name / version fields */
