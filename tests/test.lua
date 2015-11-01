@@ -361,7 +361,7 @@ local cjson_tests = {
     -- Function is listed as '?' due to pcall
     { "Set encode_number_precision(0) [throw error]",
       json.encode_number_precision, { 0 },
-      false, { "bad argument #1 to '?' (expected integer between 1 and 14)" } },
+      false, { "bad argument #1 to '?' (expected integer between 1 and 16)" } },
     { "Set encode_number_precision(\"five\") [throw error]",
       json.encode_number_precision, { "five" },
       false, { "bad argument #1 to '?' (number expected, got string)" } },
