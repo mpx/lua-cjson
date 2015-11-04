@@ -34,6 +34,7 @@ sub run_test ($) {
     my @cmd;
 
     if ($ENV{TEST_LUA_USE_VALGRIND}) {
+        warn "$name\n";
         @cmd =  ('valgrind', '-q', '--leak-check=full', 'lua', 'test_case.lua');
     } else {
         @cmd =  ('lua', 'test_case.lua');
