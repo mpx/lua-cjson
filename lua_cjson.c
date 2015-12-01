@@ -600,7 +600,7 @@ static void json_append_number(lua_State *l, json_config_t *cfg,
     if (lua_isinteger(l, lindex)) {
         lua_Integer num = lua_tointeger(l, lindex);
         strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE); /* max length of int64 is 19 */
-        len = lua_integer2str(strbuf_empty_ptr(json), num);
+        len = sprintf(strbuf_empty_ptr(json), LUA_INTEGER_FMT, num);
         strbuf_extend_length(json, len);
         return;
     }
