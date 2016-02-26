@@ -154,7 +154,7 @@ static void set_number_format(char *fmt, int precision)
 {
     int d1, d2, i;
 
-    assert(1 <= precision && precision <= 14);
+    assert(1 <= precision && precision <= 16);
 
     /* Create printf format (%.14g) from precision */
     d1 = precision / 10;
