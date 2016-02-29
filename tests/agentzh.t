@@ -41,7 +41,79 @@ print(cjson.encode({dogs = {}}))
 
 
 
-=== TEST 4: & in JSON
+=== TEST 4: empty_array userdata
+--- lua
+local cjson = require "cjson"
+print(cjson.encode({arr = cjson.empty_array}))
+--- out
+{"arr":[]}
+
+
+
+=== TEST 5: empty_array_mt
+--- lua
+local cjson = require "cjson"
+local empty_arr = setmetatable({}, cjson.empty_array_mt)
+print(cjson.encode({arr = empty_arr}))
+--- out
+{"arr":[]}
+
+
+
+=== TEST 6: empty_array_mt and empty tables as objects (explicit)
+--- lua
+local cjson = require "cjson"
+local empty_arr = setmetatable({}, cjson.empty_array_mt)
+print(cjson.encode({obj = {}, arr = empty_arr}))
+--- out
+{"arr":[],"obj":{}}
+
+
+
+=== TEST 7: empty_array_mt and empty tables as objects (explicit)
+--- lua
+local cjson = require "cjson"
+cjson.encode_empty_table_as_object(true)
+local empty_arr = setmetatable({}, cjson.empty_array_mt)
+local data = {
+  arr = empty_arr,
+  foo = {
+    obj = {},
+    foobar = {
+      arr = cjson.empty_array,
+      obj = {}
+    }
+  }
+}
+print(cjson.encode(data))
+--- out
+{"foo":{"foobar":{"obj":{},"arr":[]},"obj":{}},"arr":[]}
+
+
+
+=== TEST 8: empty_array_mt on non-empty tables
+--- lua
+local cjson = require "cjson"
+cjson.encode_empty_table_as_object(true)
+local array = {"hello", "world", "lua"}
+setmetatable(array, cjson.empty_array_mt)
+local data = {
+  arr = array,
+  foo = {
+    obj = {},
+    foobar = {
+      arr = cjson.empty_array,
+      obj = {}
+    }
+  }
+}
+print(cjson.encode(data))
+--- out
+{"foo":{"foobar":{"obj":{},"arr":[]},"obj":{}},"arr":["hello","world","lua"]}
+
+
+
+=== TEST 9: & in JSON
 --- lua
 local cjson = require "cjson"
 local a="[\"a=1&b=2\"]"
@@ -52,7 +124,7 @@ print(cjson.encode(b))
 
 
 
-=== TEST 5: default and max precision
+=== TEST 10: default and max precision
 --- lua
 local math = require "math"
 local cjson = require "cjson"
