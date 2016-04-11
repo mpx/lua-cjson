@@ -1,0 +1,23 @@
+sudo: required
+dist: trusty
+
+os: linux
+
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  matrix:
+    - LUA=lua5.1-dev LUA_DEV=liblua5.1-dev LUA_INCLUDE_DIR=/usr/include/lua5.1 LUA_CMODULE_DIR=/lib LUALIB=-llua5.1
+    - LUA=libluajit-5.1-dev LUA_DEV=libluajit-5.1-dev LUA_INCLUDE_DIR=/usr/include/luajit-2.0 LUA_CMODULE_DIR=/lib LUALIB=-lluajit-5.1
+
+install:
+    - sudo apt-get update 
+    - sudo apt-get install -y $LUA luarocks
+
+script:
+  - make
+  - sh runtests.sh
