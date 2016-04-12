@@ -40,7 +40,13 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+
+#ifdef __cplusplus
+#include <lua.hpp>
+#else
 #include <lua.h>
+#endif
+
 #include <lauxlib.h>
 
 #include "strbuf.h"
@@ -56,6 +62,14 @@
 
 /* Workaround for Solaris platforms missing isinf() */
 #if !defined(isinf) && (defined(USE_INTERNAL_ISINF) || defined(MISSING_ISINF))
+#define isinf(x) (!isnan(x) && isnan((x) - (x)))
+#endif
+
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#define strncasecmp _strnicmp
+#include <float.h>
+#define isnan(x) _isnan(x)
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
 #endif
 
@@ -193,7 +207,7 @@ static json_config_t *json_fetch_config(lua_State *l)
 {
     json_config_t *cfg;
 
-    cfg = lua_touserdata(l, lua_upvalueindex(1));
+    cfg = (json_config_t *)lua_touserdata(l, lua_upvalueindex(1));
     if (!cfg)
         luaL_error(l, "BUG: Unable to fetch CJSON configuration");
 
@@ -360,7 +374,7 @@ static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
 
-    cfg = lua_touserdata(l, 1);
+    cfg = (json_config_t *)lua_touserdata(l, 1);
     if (cfg)
         strbuf_free(&cfg->encode_buf);
     cfg = NULL;
@@ -373,7 +387,7 @@ static void json_create_config(lua_State *l)
     json_config_t *cfg;
     int i;
 
-    cfg = lua_newuserdata(l, sizeof(*cfg));
+    cfg = (json_config_t *)lua_newuserdata(l, sizeof(*cfg));
 
     /* Create GC method to clean up strbuf */
     lua_newtable(l);
@@ -1407,7 +1421,13 @@ static int lua_cjson_safe_new(lua_State *l)
     return 1;
 }
 
-int luaopen_cjson(lua_State *l)
+#ifdef _MSC_VER
+#define EXPORT_API __declspec(dllexport) 
+#else
+#define EXPORT_API 
+#endif
+
+int EXPORT_API luaopen_cjson(lua_State *l)
 {
     lua_cjson_new(l);
 
@@ -1421,7 +1441,7 @@ int luaopen_cjson(lua_State *l)
     return 1;
 }
 
-int luaopen_cjson_safe(lua_State *l)
+int EXPORT_API luaopen_cjson_safe(lua_State *l)
 {
     lua_cjson_safe_new(l);
 
