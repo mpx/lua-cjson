@@ -185,6 +185,7 @@ setting = cjson.encode_invalid_numbers([setting])
 keep = cjson.encode_keep_buffer([keep])
 depth = cjson.encode_max_depth([depth])
 depth = cjson.decode_max_depth([depth])
+escape = cjson.encode_escape_utf8([escape])
 convert, ratio, safe = cjson.encode_sparse_array([convert[, ratio[, safe]]])
 ------------
 
@@ -327,6 +328,28 @@ more than 1000 levels deep.
 
 The current setting is always returned, and is only updated when an
 argument is provided.
+
+
+[[encode_escape_utf8]]
+encode_escape_utf8
+~~~~~~
+
+[source,lua]
+------------
+escape = cjson.encode_escape_utf8([escape])
+-- escape can be true, false, or any char. Default: false.
+------------
+
+Encode all utf-8 char to '\uffff' style.
+
+escape
+
+.Example: Escape utf-8 char
+[source,lua]
+value = { "中文" }
+cjson.encode_escape_utf8(true)
+json_text = cjson.encode(value)
+-- Returns: '["\u4e2d\u6587"]'
 
 
 [[encode]]

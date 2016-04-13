@@ -45,6 +45,7 @@
 
 #include "strbuf.h"
 #include "fpconv.h"
+#include "utf8_decoder.h"
 
 #ifndef CJSON_MODNAME
 #define CJSON_MODNAME   "cjson"
@@ -67,6 +68,7 @@
 #define DEFAULT_ENCODE_INVALID_NUMBERS 0
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
+#define DEFAULT_ENCODE_ESCAPE_UTF8 0
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
 
 #ifdef DISABLE_INVALID_NUMBERS
@@ -124,6 +126,7 @@ typedef struct {
     int encode_invalid_numbers;     /* 2 => Encode as "null" */
     int encode_number_precision;
     int encode_keep_buffer;
+    int encode_escape_utf8;       /* 0, 1, -i -> char i */
 
     int decode_invalid_numbers;
     int decode_max_depth;
@@ -300,6 +303,29 @@ static int json_cfg_encode_number_precision(lua_State *l)
     return json_integer_option(l, 1, &cfg->encode_number_precision, 1, 14);
 }
 
+/* Configures JSON encoding converting utf-8 text to \uxxxx */
+/* false, true, char */
+static int json_cfg_encode_escape_utf8(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+    const unsigned char *str;
+    size_t len;
+
+    switch (lua_type(l, 1)) {
+    case LUA_TBOOLEAN:
+        cfg->encode_escape_utf8 = lua_toboolean(l, 1) ? 1 : 0;
+        break;
+    case LUA_TSTRING:
+        str = (unsigned char* )lua_tolstring(l, 1, &len);
+        if (len > 0) {
+            cfg->encode_escape_utf8 = -1 * (unsigned int) str[0];
+        }
+        break;
+    }
+
+    return 1;
+}
+
 /* Configures JSON encoding buffer persistence */
 static int json_cfg_encode_keep_buffer(lua_State *l)
 {
@@ -389,6 +415,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_invalid_numbers = DEFAULT_ENCODE_INVALID_NUMBERS;
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
+    cfg->encode_escape_utf8 = DEFAULT_ENCODE_ESCAPE_UTF8;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
@@ -454,16 +481,24 @@ static void json_encode_exception(lua_State *l, json_config_t *cfg, strbuf_t *js
 
 /* json_append_string args:
  * - lua_State
+ * - JSON config
  * - JSON strbuf
  * - String (Lua stack index)
  *
  * Returns nothing. Doesn't remove string from Lua stack */
-static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
+static void json_append_string(lua_State *l, json_config_t *cfg, strbuf_t *json, int lindex)
 {
     const char *escstr;
     const char *str;
     size_t len;
     size_t i;
+
+    /* for utf8 escape */
+    uint32_t prev_state = 0;
+    uint32_t state = 0;
+    uint32_t codepoint;
+    unsigned char utf8_place_char;
+    char utf8_buf[7];
 
     str = lua_tolstring(l, lindex, &len);
 
@@ -474,13 +509,50 @@ static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
     strbuf_ensure_empty_length(json, len * 6 + 2);
 
     strbuf_append_char_unsafe(json, '\"');
-    for (i = 0; i < len; i++) {
-        escstr = char2escape[(unsigned char)str[i]];
-        if (escstr)
-            strbuf_append_string(json, escstr);
-        else
-            strbuf_append_char_unsafe(json, str[i]);
+
+    if (cfg->encode_escape_utf8 < 0 || cfg->encode_escape_utf8 == 1) {
+        utf8_place_char = cfg->encode_escape_utf8 == 1 ? 0 : ((unsigned char) (-1 * cfg->encode_escape_utf8));
+        /* fprintf(stderr, "%c", utf8_place_char); */
+
+        for (i = 0; i < len; prev_state = state, ++i) {
+            switch (utf8_decode(&state, &codepoint, (unsigned char) str[i])) {
+            case UTF8_ACCEPT:
+                /* A properly encoded character has been found. */
+                if (codepoint >= 0 && codepoint <= 127) {
+                    escstr = char2escape[(unsigned char) codepoint];
+                    if (escstr)
+                        strbuf_append_string(json, escstr);
+                    else
+                        strbuf_append_char_unsafe(json, codepoint);
+                } else {
+                    snprintf(utf8_buf, 7, "\\u%04x", codepoint);
+                    strbuf_append_string(json, utf8_buf);
+                }
+                break;
+
+            case UTF8_REJECT:
+                /* The byte is invalid, replace it and restart. */
+                if (! utf8_place_char) {
+                    luaL_error(l, "utf8 string (%s) invalid at (%d)", str, i);
+                }
+
+                strbuf_append_char_unsafe(json, utf8_place_char);
+                state = UTF8_ACCEPT;
+                if (prev_state != UTF8_ACCEPT)
+                    --i;
+                break;
+            }
+        }
+    } else {
+        for (i = 0; i < len; i++) {
+            escstr = char2escape[(unsigned char)str[i]];
+            if (escstr)
+                strbuf_append_string(json, escstr);
+            else
+                strbuf_append_char_unsafe(json, str[i]);
+        }
     }
+
     strbuf_append_char_unsafe(json, '\"');
 }
 
@@ -645,7 +717,7 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
             json_append_number(l, cfg, json, -2);
             strbuf_append_mem(json, "\":", 2);
         } else if (keytype == LUA_TSTRING) {
-            json_append_string(l, json, -2);
+            json_append_string(l, cfg, json, -2);
             strbuf_append_char(json, ':');
         } else {
             json_encode_exception(l, cfg, json, -2,
@@ -670,7 +742,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
 
     switch (lua_type(l, -1)) {
     case LUA_TSTRING:
-        json_append_string(l, json, -1);
+        json_append_string(l, cfg, json, -1);
         break;
     case LUA_TNUMBER:
         json_append_number(l, cfg, json, -1);
@@ -1357,6 +1429,7 @@ static int lua_cjson_new(lua_State *l)
         { "decode_max_depth", json_cfg_decode_max_depth },
         { "encode_number_precision", json_cfg_encode_number_precision },
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
+        { "encode_escape_utf8", json_cfg_encode_escape_utf8 },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
         { "new", lua_cjson_new },
