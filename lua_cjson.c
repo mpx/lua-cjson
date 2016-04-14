@@ -51,7 +51,7 @@
 #endif
 
 #ifndef CJSON_VERSION
-#define CJSON_VERSION   "2.1devel"
+#define CJSON_VERSION   "2.1.1"
 #endif
 
 /* Workaround for Solaris platforms missing isinf() */
@@ -73,6 +73,8 @@
 #undef DEFAULT_DECODE_INVALID_NUMBERS
 #define DEFAULT_DECODE_INVALID_NUMBERS 0
 #endif
+
+#define DEFAULT_DECODE_NUMBERS_AS_STRINGS 0
 
 typedef enum {
     T_OBJ_BEGIN,
@@ -126,6 +128,7 @@ typedef struct {
     int encode_keep_buffer;
 
     int decode_invalid_numbers;
+    int decode_numbers_as_strings;
     int decode_max_depth;
 } json_config_t;
 
@@ -356,6 +359,15 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
     return 1;
 }
 
+static int json_cfg_decode_numbers_as_strings(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+
+    json_enum_option(l, 1, &cfg->decode_numbers_as_strings, NULL, 1);
+
+    return 1;
+}
+
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
@@ -388,6 +400,7 @@ static void json_create_config(lua_State *l)
     cfg->decode_max_depth = DEFAULT_DECODE_MAX_DEPTH;
     cfg->encode_invalid_numbers = DEFAULT_ENCODE_INVALID_NUMBERS;
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
+    cfg->decode_numbers_as_strings = DEFAULT_DECODE_NUMBERS_AS_STRINGS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
 
@@ -592,20 +605,12 @@ static void json_append_number(lua_State *l, json_config_t *cfg,
     if (cfg->encode_invalid_numbers == 0) {
         /* Prevent encoding invalid numbers */
         if (isinf(num) || isnan(num))
-            json_encode_exception(l, cfg, json, lindex,
-                                  "must not be NaN or Infinity");
+            json_encode_exception(l, cfg, json, lindex, "must not be NaN or Inf");
     } else if (cfg->encode_invalid_numbers == 1) {
-        /* Encode NaN/Infinity separately to ensure Javascript compatible
-         * values are used. */
+        /* Encode invalid numbers, but handle "nan" separately
+         * since some platforms may encode as "-nan". */
         if (isnan(num)) {
-            strbuf_append_mem(json, "NaN", 3);
-            return;
-        }
-        if (isinf(num)) {
-            if (num < 0)
-                strbuf_append_mem(json, "-Infinity", 9);
-            else
-                strbuf_append_mem(json, "Infinity", 8);
+            strbuf_append_mem(json, "nan", 3);
             return;
         }
     } else {
@@ -1013,6 +1018,33 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
     return;
 }
 
+static void json_next_number_as_string_token(json_parse_t *json, json_token_t *token)
+{
+    char ch;
+
+    /* json->tmp is the temporary strbuf used to accumulate the
+     * decoded string value.
+     * json->tmp is sized to handle JSON containing only a string value.
+     */
+    strbuf_reset(json->tmp);
+
+    while (((ch = *json->ptr) >= '0' && ch <= '9') || ch == '-' || ch == '+' || ch == '.') {
+        if (!ch) {
+            /* Premature end of the string */
+            json_set_token_error(token, json, "unexpected end of string");
+            return;
+        }
+
+        strbuf_append_char_unsafe(json->tmp, ch);
+        json->ptr++;
+    }
+
+    strbuf_ensure_null(json->tmp);
+
+    token->type = T_STRING;
+    token->value.string = strbuf_string(json->tmp, &token->string_len);
+}
+
 /* Fills in the token struct.
  * T_STRING will return a pointer to the json_parse_t temporary string
  * T_ERROR will leave the json->ptr pointer at the error.
@@ -1065,7 +1097,10 @@ static void json_next_token(json_parse_t *json, json_token_t *token)
             json_set_token_error(token, json, "invalid number");
             return;
         }
-        json_next_number_token(json, token);
+        if (json->cfg->decode_numbers_as_strings)
+            json_next_number_as_string_token(json, token);
+        else
+            json_next_number_token(json, token);
         return;
     } else if (!strncmp(json->ptr, "true", 4)) {
         token->type = T_BOOLEAN;
@@ -1359,6 +1394,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+        { "decode_numbers_as_strings", json_cfg_decode_numbers_as_strings },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };

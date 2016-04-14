@@ -203,8 +203,8 @@ Import Lua CJSON via the Lua +require+ function. Lua CJSON does not
 register a global module table.
 
 The +cjson+ module will throw an error during JSON conversion if any
-invalid data is encountered. Refer to <<encode,+cjson.encode+>> and
-<<decode,+cjson.decode+>> for details.
+invalid data is encountered. Refer to <<cjson_encode,+cjson.encode+>>
+and <<cjson_decode,+cjson.decode+>> for details.
 
 The +cjson.safe+ module behaves identically to the +cjson+ module,
 except when errors are encountered during JSON conversion. On error, the
@@ -238,7 +238,6 @@ workaround if required. Lua CJSON should be reinitialised via
 different locale per thread is not supported.
 
 
-[[decode]]
 decode
 ~~~~~~
 

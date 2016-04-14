@@ -1,3 +1,6 @@
+Version 2.1.1 (May 25 2013)
+* Added decode_numbers_as_strings()
+
 Version 2.1.0 (Mar 1 2012)
 * Added cjson.safe module interface which returns nil after an error
 * Improved Makefile compatibility with Solaris make
