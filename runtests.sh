@@ -66,27 +66,4 @@ cp -r lua/cjson build/cjson.so tests
 do_tests
 rm -rf build tests/cjson{,.so}
 
-if [ "$PLATFORM" = "Linux" ]
-then
-    echo "===== Testing RPM build ====="
-    SRCTGZ=""
-    TGZ=lua-cjson-$VERSION.tar.gz
-    for D in .. packages .
-    do
-        [ -r "$D/$TGZ" ] && SRCTGZ="$D/$TGZ"
-    done
-    if [ "$SRCTGZ" ]
-    then
-        LOG=/tmp/build.$$
-        rpmbuild -tb "$SRCTGZ" > "$LOG"
-        RPM="`awk '/^Wrote: / && ! /debuginfo/ { print $2}' < "$LOG"`"
-        sudo -- rpm -Uvh \"$RPM\"
-        do_tests
-        sudo -- rpm -e lua-cjson
-        rm -f "$LOG"
-    else
-        echo "==> skipping, $TGZ not found"
-    fi
-fi
-
 # vi:ai et sw=4 ts=4:
