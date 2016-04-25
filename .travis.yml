@@ -16,8 +16,9 @@ env:
 
 install:
     - sudo apt-get update
-    - sudo apt-get install -y $LUA luarocks
+    - sudo apt-get install -qq -y $LUA luarocks cppcheck
 
 script:
+  - cppcheck --force --error-exitcode=1 --enable=warning . > build.log 2>&1 || (cat build.log && exit 1)
   - make
   - sh runtests.sh
