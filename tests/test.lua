@@ -176,6 +176,13 @@ local cjson_tests = {
       json.decode, { string.rep("[", 1100) .. '1100' .. string.rep("]", 1100)},
       false, { "Found too many nested data structures (1001) at character 1001" } },
 
+    { "Decode array syntax sets mt.__jsontype = 'array'",
+      function()
+          local t = json.decode("[]")
+          return getmetatable(t).__jsontype == 'array'
+      end, { },
+      true, { true } },
+
     -- Test encoding nested tables
     { "Set encode_max_depth(5)",
       json.encode_max_depth, { 5 }, true, { 5 } },
@@ -198,6 +205,29 @@ local cjson_tests = {
     { "Encode deeply nested data [throw error]",
       json.encode, { testdata.deeply_nested_data },
       false, { "Cannot serialise, excessive nesting (1001)" } },
+
+    -- Test encoding with metatable.__tojson
+    { "Encode a table that has a __tojson",
+      function()
+          local mt = {__tojson=function() return "asdf" end}
+          local t = {}
+          setmetatable(t, mt)
+          return json.encode(t)
+      end, {}, true, { "asdf" } },
+    { "Encode multiple tables that have __tojson",
+      function()
+          local mt = {__tojson=function() return "asdf" end}
+          local t = {}
+          setmetatable(t, mt)
+          return json.encode({c={t,t,t}})
+      end, {}, true, { '{"c":[asdf,asdf,asdf]}' } },
+    { "Encode a table that has a metatable without a __tojson",
+      function()
+          local mt = {a=1}
+          local t = {b=1}
+          setmetatable(t, mt)
+          return json.encode(t)
+      end, {}, true, { '{"b":1}' } },
 
     -- Test encoding simple types
     { "Encode null",
@@ -402,6 +432,21 @@ local cjson_tests = {
     { "Decode (safe) error generation after new()",
       function(...) return json_safe.new().decode(...) end, { "Oops" },
       true, { nil, "Expected value but found invalid token at character 1" } },
+
+    -- Test encoding invalid type callback
+    { "set_invalid_type_encoder(...)",
+      json.set_invalid_type_encoder, { function() return "FOO" end }, true, { } },
+    { "Encode Lua function with invalid_type_encoder",
+      json.encode, { function () end },
+      true, { "FOO" } },
+
+    -- Test sorted keys
+    { "encode_sort_keys(true)",
+      json.encode_sort_keys, { true }, true, { } },
+    { "test sorted encode",
+     json.encode, { {a=1,b=1,c=1,d=1,e=1,f=1,g=1,h=1,i=1,j=1,k=1,l=1,m=1,n=1,o=1} },
+      true, { '{"a":1,"b":1,"c":1,"d":1,"e":1,"f":1,"g":1,"h":1,"i":1,"j":1,"k":1,"l":1,"m":1,"n":1,"o":1}' } },
+
 }
 
 print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))
