@@ -16,12 +16,15 @@ env:
 
 install:
     - sudo apt-get update
-    - sudo apt-get install -qq -y $LUA luarocks cppcheck
+    - sudo apt-get install -qq -y $LUA luarocks cppcheck valgrind
     - sudo apt-get install -qq -y cpanminus libipc-run3-perl > build.log 2>&1 || (cat build.log && exit 1)
     - sudo cpanm --notest Test::Base Test::LongString > build.log 2>&1 || (cat build.log && exit 1)
 
 script:
   - cppcheck --force --error-exitcode=1 --enable=warning . > build.log 2>&1 || (cat build.log && exit 1)
+  - sh runtests.sh
   - make
   - prove -Itests tests
-  - sh runtests.sh
+  - TEST_LUA_USE_VALGRIND=1 prove -Itests tests > build.log 2>&1
+  - cat build.log
+  - grep -E '^==[0-9]+==' build.log; if [ "$?" == 0 ]; then exit 1; else exit 0; fi
