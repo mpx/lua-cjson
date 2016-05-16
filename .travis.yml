@@ -17,8 +17,11 @@ env:
 install:
     - sudo apt-get update
     - sudo apt-get install -qq -y $LUA luarocks cppcheck
+    - sudo apt-get install -qq -y cpanminus libipc-run3-perl > build.log 2>&1 || (cat build.log && exit 1)
+    - sudo cpanm --notest Test::Base Test::LongString > build.log 2>&1 || (cat build.log && exit 1)
 
 script:
   - cppcheck --force --error-exitcode=1 --enable=warning . > build.log 2>&1 || (cat build.log && exit 1)
   - make
+  - prove -Itests tests
   - sh runtests.sh
