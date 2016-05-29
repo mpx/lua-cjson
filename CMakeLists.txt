@@ -8,6 +8,11 @@ cmake_minimum_required(VERSION 2.6)
 
 option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
 option(MULTIPLE_THREADS "Support multi-threaded apps with internal fpconv - recommended" ON)
+option(ENABLE_DTRACE "DTrace support" OFF)
+
+if(ENABLE_DTRACE)
+    find_program(DTRACE dtrace)
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -68,9 +73,46 @@ else()
     set(_lua_module_dir "${_lua_lib_dir}/lua/5.1")
 endif()
 
-add_library(cjson MODULE lua_cjson.c strbuf.c ${FPCONV_SOURCES})
+# Init empty cjson_obj for adding dtrace.o after generation one
+set(cjson_obj)
+
+add_library(cjson_objs OBJECT lua_cjson.c strbuf.c ${FPCONV_SOURCES})
+set_target_properties(cjson_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set(cjson_obj ${cjson_obj} $<TARGET_OBJECTS:cjson_objs>)
+
+if(ENABLE_DTRACE AND DTRACE)
+    message(STATUS "DTrace found and enabled to build with probes")
+    add_definitions(-DENABLE_DTRACE)
+    set(D_FILE ${PROJECT_SOURCE_DIR}/cjson_dtrace)
+    execute_process(
+       COMMAND ${DTRACE} -h -s ${D_FILE}.d -o ${D_FILE}.h
+    )
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+# Dirty hack, because isn't supported see for more details:
+# http://public.kitware.com/Bug/view.php?id=14447
+        set(cjson_c_o ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/cjson_objs.dir/lua_cjson.c.o)
+        set(dtrace_obj ${CMAKE_CURRENT_BINARY_DIR}/dtrace.o)
+        add_custom_command(OUTPUT ${dtrace_obj}
+            COMMAND ${DTRACE} -G -s ${D_FILE}.d -o ${dtrace_obj} ${cjson_c_o}
+            DEPENDS ${cjson_c_o}
+        )
+        set_source_files_properties(${dtrace_obj}
+            PROPERTIES
+            EXTERNAL_OBJECT true
+            GENERATED true
+        )
+        set(_MODULE_LINK ${_MODULE_LINK} elf)
+        set(cjson_obj ${cjson_obj} ${dtrace_obj})
+        unset(cjson_c_o)
+        unset(dtrace_obj)
+        unset(D_FILE)
+    endif()
+endif()
+
+add_library(cjson MODULE ${cjson_obj})
 set_target_properties(cjson PROPERTIES PREFIX "")
 target_link_libraries(cjson ${_MODULE_LINK})
+
 install(TARGETS cjson DESTINATION "${_lua_module_dir}")
 
 # vi:ai et sw=4 ts=4:

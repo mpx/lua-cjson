@@ -43,6 +43,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
+#include "external.h"
+
 #include "strbuf.h"
 #include "fpconv.h"
 
@@ -708,6 +710,9 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
 
 static int json_encode(lua_State *l)
 {
+    if (LUA_CJSON_START_ENABLED())
+        LUA_CJSON_START();
+      
     json_config_t *cfg = json_fetch_config(l);
     strbuf_t local_encode_buf;
     strbuf_t *encode_buf;
@@ -734,6 +739,9 @@ static int json_encode(lua_State *l)
     if (!cfg->encode_keep_buffer)
         strbuf_free(encode_buf);
 
+    if (LUA_CJSON_END_ENABLED())
+        LUA_CJSON_END(len, json);
+      
     return 1;
 }
 
@@ -1258,6 +1266,8 @@ static void json_process_value(lua_State *l, json_parse_t *json,
 
 static int json_decode(lua_State *l)
 {
+    if (LUA_CJSON_START_ENABLED())
+        LUA_CJSON_START();
     json_parse_t json;
     json_token_t token;
     size_t json_len;
@@ -1292,6 +1302,9 @@ static int json_decode(lua_State *l)
         json_throw_parse_error(l, &json, "the end", &token);
 
     strbuf_free(json.tmp);
+
+    if (LUA_CJSON_END_ENABLED())
+        LUA_CJSON_END(json_len, (char *)json.data);
 
     return 1;
 }
