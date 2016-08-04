@@ -193,7 +193,7 @@ static json_config_t *json_fetch_config(lua_State *l)
 {
     json_config_t *cfg;
 
-    cfg = lua_touserdata(l, lua_upvalueindex(1));
+    cfg = (json_config_t *)lua_touserdata(l, lua_upvalueindex(1));
     if (!cfg)
         luaL_error(l, "BUG: Unable to fetch CJSON configuration");
 
@@ -360,7 +360,7 @@ static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
 
-    cfg = lua_touserdata(l, 1);
+    cfg = (json_config_t *)lua_touserdata(l, 1);
     if (cfg)
         strbuf_free(&cfg->encode_buf);
     cfg = NULL;
@@ -373,7 +373,7 @@ static void json_create_config(lua_State *l)
     json_config_t *cfg;
     int i;
 
-    cfg = lua_newuserdata(l, sizeof(*cfg));
+    cfg = (json_config_t *)lua_newuserdata(l, sizeof(*cfg));
 
     /* Create GC method to clean up strbuf */
     lua_newtable(l);
@@ -461,9 +461,9 @@ static void json_encode_exception(lua_State *l, json_config_t *cfg, strbuf_t *js
 static void json_append_string(lua_State *l, strbuf_t *json, int lindex)
 {
     const char *escstr;
-    int i;
     const char *str;
     size_t len;
+    size_t i;
 
     str = lua_tolstring(l, lindex, &len);
 
