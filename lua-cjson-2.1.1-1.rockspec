@@ -48,7 +48,9 @@ build = {
     -- Override default build options (per platform)
     platforms = {
         win32 = { modules = { cjson = { defines = {
-            "DISABLE_INVALID_NUMBERS"
+            "DISABLE_INVALID_NUMBERS",
+            "LUA_BUILD_AS_DLL",
+            "LUA_LIB"
         } } } }
     },
     copy_directories = { "tests" }

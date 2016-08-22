@@ -63,7 +63,7 @@ if(WIN32)
     set(_MODULE_LINK ${LUA_LIBRARY} ${_MODULE_LINK})
     set(_lua_module_dir "${_lua_lib_dir}")
     # Windows sprintf()/strtod() handle NaN/inf differently. Not supported.
-    add_definitions(-DDISABLE_INVALID_NUMBERS)
+    add_definitions(-DDISABLE_INVALID_NUMBERS -DLUA_BUILD_AS_DLL -DLUA_LIB)
 else()
     set(_lua_module_dir "${_lua_lib_dir}/lua/5.1")
 endif()
