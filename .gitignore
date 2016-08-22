@@ -5,3 +5,8 @@ notes
 packages
 tags
 tests/utf8.dat
+*.obj
+cjson.lib
+cjson.exp
+cjson.dll
+cjson.def
