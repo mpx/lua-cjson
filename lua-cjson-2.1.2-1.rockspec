@@ -1,9 +1,9 @@
 package = "lua-cjson"
-version = "2.1.1-1"
+version = "2.1.2-1"
 
 source = {
   url = 'git://github.com/xpol/lua-cjson',
-  tag = '2.1.1',
+  tag = '2.1.2',
 }
 
 description = {
