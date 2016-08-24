@@ -84,12 +84,12 @@ OBJS =              lua_cjson.o strbuf.o $(FPCONV_OBJS)
 
 .PHONY: all clean install install-extra doc
 
-.SUFFIXES: .html .txt
+.SUFFIXES: .html .adoc
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(BUILD_CFLAGS) -o $@ $<
 
-.txt.html:
+.adoc.html:
 	$(ASCIIDOC) -n -a toc $<
 
 all: $(TARGET)
