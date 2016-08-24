@@ -11,7 +11,7 @@
 ##                          multi-threaded application. Requries _pthreads_.
 
 ##### Build defaults #####
-LUA_VERSION =       5.1
+LUA_VERSION =       5.3
 TARGET =            cjson.so
 PREFIX =            /usr/local
 #CFLAGS =            -g -Wall -pedantic -fno-inline
