@@ -10,6 +10,11 @@ local json = require "cjson"
 -- -1   Not an array
 -- 0    Empty table
 -- >0   Highest index in the array
+
+-- Provide unpack for Lua 5.3+ built without LUA_COMPAT_UNPACK
+local unpack = unpack
+if table.unpack then unpack = table.unpack end
+
 local function is_array(table)
     local max = 0
     local count = 0
