@@ -74,6 +74,7 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
+#define DEFAULT_DECODE_BIG_NUMBERS_AS_STRINGS 0
 
 #ifdef DISABLE_INVALID_NUMBERS
 #undef DEFAULT_DECODE_INVALID_NUMBERS
@@ -133,6 +134,7 @@ typedef struct {
 
     int decode_invalid_numbers;
     int decode_max_depth;
+    int decode_big_numbers_as_strings;
 } json_config_t;
 
 typedef struct {
@@ -362,6 +364,15 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
     return 1;
 }
 
+static int json_cfg_decode_big_numbers_as_strings(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+
+    json_enum_option(l, 1, &cfg->decode_big_numbers_as_strings, NULL, 1);
+
+    return 1;
+}
+
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
@@ -396,6 +407,7 @@ static void json_create_config(lua_State *l)
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
+    cfg->decode_big_numbers_as_strings = DEFAULT_DECODE_BIG_NUMBERS_AS_STRINGS;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
     strbuf_init(&cfg->encode_buf, 0);
@@ -1005,12 +1017,36 @@ static int json_is_invalid_number(json_parse_t *json)
     return 0;
 }
 
+
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
     char *endptr;
 
-    token->type = T_NUMBER;
     token->value.number = fpconv_strtod(json->ptr, &endptr);
+    if (json->ptr == endptr) {
+        json_set_token_error(token, json, "invalid number");
+    }
+
+    // double has 53 bit significant, therefore 2^53=9007199254740992
+    // is the largest integer that can be represented. For a floating
+    // point value, that consumes more than 16 characters may result
+    // in precision loss during conversion. Note that we are being
+    // pessimistic in that some floating point values that consume
+    // 17 characters may be represented without conversion loss.
+    if ( json->cfg->decode_big_numbers_as_strings &&
+         ( endptr - json->ptr > 16 ||
+           fabs(token->value.number) > 9007199254740991.0 ) )
+    {
+        token->type = T_STRING;
+        strbuf_reset(json->tmp);
+        for (; json->ptr != endptr; json->ptr++ ) {
+            strbuf_append_char_unsafe(json->tmp, json->ptr[0]);
+        }
+        token->value.string = strbuf_string(json->tmp, &token->string_len);
+        return;
+    }
+    token->type = T_NUMBER;
+
     if (json->ptr == endptr)
         json_set_token_error(token, json, "invalid number");
     else
@@ -1365,6 +1401,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+        { "decode_big_numbers_as_strings", json_cfg_decode_big_numbers_as_strings },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };
