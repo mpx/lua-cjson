@@ -5,6 +5,10 @@
  * Longest double printed with %.14g is 21 characters long:
  * -1.7976931348623e+308 */
 # define FPCONV_G_FMT_BUFSIZE   32
+#ifdef _WIN32
+#define inline __inline
+#define snprintf _snprintf
+#endif
 
 #ifdef USE_INTERNAL_FPCONV
 static inline void fpconv_init()

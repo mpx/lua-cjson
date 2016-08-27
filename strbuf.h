@@ -24,6 +24,9 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#ifdef _WIN32
+#define inline __inline
+#endif
 
 /* Size: Total bytes allocated to *buf
  * Length: String length, excluding optional NULL terminator.
