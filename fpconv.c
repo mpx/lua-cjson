@@ -33,6 +33,11 @@
 #include <assert.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+# define inline __inline
+# define snprintf _snprintf 
+#endif
+
 #include "fpconv.h"
 
 /* Lua CJSON assumes the locale is the same for all threads within a
