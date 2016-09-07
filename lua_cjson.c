@@ -499,6 +499,7 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
     double k;
     int max;
     int items;
+    int is_array = -1;
 
     max = 0;
     items = 0;
@@ -522,6 +523,18 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
         /* Must not be an array (non integer key) */
         lua_pop(l, 2);
         return -1;
+    }
+
+    if (items == 0) {
+        is_array = 1;
+        lua_getfield(l, -1, "__is_array");
+        if (lua_isboolean(l, -1)) {
+            is_array = lua_toboolean(l, -1);
+        }
+        lua_pop(l, 1);
+        if (!is_array) {
+            return -1;
+        }
     }
 
     /* Encode excessively sparse arrays as objects (if enabled) */
@@ -691,7 +704,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
         len = lua_array_length(l, cfg, json);
-        if (len > 0)
+        if (len >= 0)
             json_append_array(l, cfg, current_depth, json, len);
         else
             json_append_object(l, cfg, current_depth, json);
@@ -1158,6 +1171,16 @@ static void json_parse_object_context(lua_State *l, json_parse_t *json)
 
     /* Handle empty objects */
     if (token.type == T_OBJ_END) {
+        /*Metatable outer*/
+        lua_newtable(l);
+        /*Metatable  inner */
+        lua_newtable(l);
+        /*set __is_array = false*/
+        lua_pushboolean(l, 0);
+        lua_setfield(l, -2, "__is_array");
+        /* set __index = metatable inner*/
+        lua_setfield(l, -2, "__index");
+        lua_setmetatable(l, -2);
         json_decode_ascend(json);
         return;
     }
