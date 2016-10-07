@@ -9,15 +9,24 @@ compiler:
   - gcc
   - clang
 
+addons:
+  apt:
+    packages:
+    - luarocks
+    - cppcheck
+    - valgrind
+    - cpanminus
+    - libipc-run3-perl
+
+cache:
+  apt: true
+
 env:
   matrix:
     - LUA=lua5.1-dev LUA_DEV=liblua5.1-dev LUA_INCLUDE_DIR=/usr/include/lua5.1 LUA_CMODULE_DIR=/lib LUALIB=-llua5.1
     - LUA=libluajit-5.1-dev LUA_DEV=libluajit-5.1-dev LUA_INCLUDE_DIR=/usr/include/luajit-2.0 LUA_CMODULE_DIR=/lib LUALIB=-lluajit-5.1
 
 install:
-    - sudo apt-get update
-    - sudo apt-get install -qq -y $LUA luarocks cppcheck valgrind
-    - sudo apt-get install -qq -y cpanminus libipc-run3-perl > build.log 2>&1 || (cat build.log && exit 1)
     - sudo cpanm --notest Test::Base Test::LongString > build.log 2>&1 || (cat build.log && exit 1)
 
 script:
