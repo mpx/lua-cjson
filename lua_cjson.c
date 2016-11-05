@@ -75,6 +75,12 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 0
 #endif
 
+#ifdef _MSC_VER
+/* Microsoft C compiler lacks strncasecmp and strcasecmp. */
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
+
 static const char * const *json_empty_array;
 
 typedef enum {
