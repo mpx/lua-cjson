@@ -113,7 +113,31 @@ print(cjson.encode(data))
 
 
 
-=== TEST 9: & in JSON
+=== TEST 9: multiple calls to lua_cjson_new (1/2)
+--- lua
+local cjson = require "cjson"
+package.loaded["cjson"] = nil
+require "cjson"
+local arr = setmetatable({}, cjson.empty_array_mt)
+print(cjson.encode(arr))
+--- out
+[]
+
+
+
+=== TEST 10: multiple calls to lua_cjson_new (2/2)
+--- lua
+local cjson = require "cjson.safe"
+-- load another cjson instance (not in package.loaded)
+require "cjson"
+local arr = setmetatable({}, cjson.empty_array_mt)
+print(cjson.encode(arr))
+--- out
+[]
+
+
+
+=== TEST 11: & in JSON
 --- lua
 local cjson = require "cjson"
 local a="[\"a=1&b=2\"]"
@@ -124,7 +148,7 @@ print(cjson.encode(b))
 
 
 
-=== TEST 10: default and max precision
+=== TEST 12: default and max precision
 --- lua
 local math = require "math"
 local cjson = require "cjson"

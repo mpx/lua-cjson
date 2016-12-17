@@ -1401,10 +1401,21 @@ static int lua_cjson_new(lua_State *l)
     /* Initialise number conversions */
     fpconv_init();
 
-    /* Create empty array metatable */
+    /* Test if empty array metatable is in registry */
     lua_pushlightuserdata(l, &json_empty_array);
-    lua_newtable(l);
-    lua_rawset(l, LUA_REGISTRYINDEX);
+    lua_rawget(l, LUA_REGISTRYINDEX);
+    if (lua_isnil(l, -1)) {
+        /* Create empty array metatable.
+         *
+         * If multiple calls to lua_cjson_new() are made,
+         * this prevents overriding the table at the given
+         * registry's index with a new one.
+         */
+        lua_pop(l, 1);
+        lua_pushlightuserdata(l, &json_empty_array);
+        lua_newtable(l);
+        lua_rawset(l, LUA_REGISTRYINDEX);
+    }
 
     /* cjson module table */
     lua_newtable(l);
