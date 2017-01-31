@@ -54,6 +54,16 @@
 #define CJSON_VERSION   "2.1devel"
 #endif
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+
+#ifndef isnan
+#include <float.h>
+#define isnan(x) _isnan(x)
+#endif
+
+#endif
+
 /* Workaround for Solaris platforms missing isinf() */
 #if !defined(isinf) && (defined(USE_INTERNAL_ISINF) || defined(MISSING_ISINF))
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
