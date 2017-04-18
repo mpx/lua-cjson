@@ -561,14 +561,14 @@ static void json_check_encode_depth(lua_State *l, json_config_t *cfg,
 }
 
 static void json_append_data(lua_State *l, json_config_t *cfg,
-                             int current_depth, strbuf_t *json);
+                             int current_depth, char have_empty_array_lookup_table, strbuf_t *json);
 
 /* json_append_array args:
  * - lua_State
  * - JSON strbuf
  * - Size of passwd Lua array (top of stack) */
 static void json_append_array(lua_State *l, json_config_t *cfg, int current_depth,
-                              strbuf_t *json, int array_length)
+                              char have_empty_array_lookup_table, strbuf_t *json, int array_length)
 {
     int comma, i;
 
@@ -582,7 +582,7 @@ static void json_append_array(lua_State *l, json_config_t *cfg, int current_dept
             comma = 1;
 
         lua_rawgeti(l, -1, i);
-        json_append_data(l, cfg, current_depth, json);
+        json_append_data(l, cfg, current_depth, have_empty_array_lookup_table, json);
         lua_pop(l, 1);
     }
 
@@ -628,7 +628,7 @@ static void json_append_number(lua_State *l, json_config_t *cfg,
 }
 
 static void json_append_object(lua_State *l, json_config_t *cfg,
-                               int current_depth, strbuf_t *json)
+                               int current_depth, char have_empty_array_lookup_table, strbuf_t *json)
 {
     int comma, keytype;
 
@@ -660,7 +660,7 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
         }
 
         /* table, key, value */
-        json_append_data(l, cfg, current_depth, json);
+        json_append_data(l, cfg, current_depth, have_empty_array_lookup_table, json);
         lua_pop(l, 1);
         /* table, key */
     }
@@ -668,9 +668,20 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
     strbuf_append_char(json, '}');
 }
 
+/* Check if the current empty table (at index -1) is contained in the empty-array lookup table (at index 1). */
+static char json_is_current_empty_table_an_array(lua_State *l)
+{
+    char ret;
+    lua_pushvalue(l, -1);
+    lua_gettable(l, 1);
+    ret = lua_toboolean(l, -1);
+    lua_pop(l, 1);
+    return ret;
+}
+
 /* Serialise Lua data into JSON string. */
 static void json_append_data(lua_State *l, json_config_t *cfg,
-                             int current_depth, strbuf_t *json)
+                             int current_depth, char have_empty_array_lookup_table, strbuf_t *json)
 {
     int len;
 
@@ -691,10 +702,10 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
         len = lua_array_length(l, cfg, json);
-        if (len > 0)
-            json_append_array(l, cfg, current_depth, json, len);
+        if ((len > 0) || ((len == 0 ) && have_empty_array_lookup_table && json_is_current_empty_table_an_array(l)))
+            json_append_array(l, cfg, current_depth, have_empty_array_lookup_table, json, len);
         else
-            json_append_object(l, cfg, current_depth, json);
+            json_append_object(l, cfg, current_depth, have_empty_array_lookup_table, json);
         break;
     case LUA_TNIL:
         strbuf_append_mem(json, "null", 4);
@@ -719,8 +730,23 @@ static int json_encode(lua_State *l)
     strbuf_t *encode_buf;
     char *json;
     int len;
+    char have_empty_array_lookup_table =0;
 
-    luaL_argcheck(l, lua_gettop(l) == 1, 1, "expected 1 argument");
+    if ((lua_gettop(l) == 2) && (lua_type(l, 2) == LUA_TTABLE)) {
+        /*
+         * An empty-array lookup table is supplied; swap arguments as
+         * further code expects value at the top, and the lookup table
+         * at index 1.
+         */
+        lua_insert(l, -2);
+        have_empty_array_lookup_table = 1;
+    } else if ((lua_gettop(l) == 2) && !lua_toboolean(l, 2))
+        /*
+         * A false-valued empty-array lookup table is supplied; drop it.
+         */
+        lua_pop(l, 1);
+    else
+        luaL_argcheck(l, lua_gettop(l) == 1, 1, "expected 1 argument");
 
     if (!cfg->encode_keep_buffer) {
         /* Use private buffer */
@@ -732,7 +758,7 @@ static int json_encode(lua_State *l)
         strbuf_reset(encode_buf);
     }
 
-    json_append_data(l, cfg, 0, encode_buf);
+    json_append_data(l, cfg, 0, have_empty_array_lookup_table, encode_buf);
     json = strbuf_string(encode_buf, &len);
 
     lua_pushlstring(l, json, len);
