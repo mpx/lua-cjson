@@ -1,0 +1,18 @@
+language: c
+dist: jessie
+
+env:
+  - LUA_VERSION=5.1
+  - LUA_VERSION=5.2
+  - LUA_VERSION=5.3
+
+before_install:
+- sudo rm -rf /etc/dpkg/dpkg.cfg.d/multiarch /etc/apt/sources.list* && sudo touch /etc/apt/sources.list
+- wget -qO - https://ftp-master.debian.org/keys/archive-key-8.asc | sudo apt-key add -
+- sudo add-apt-repository "deb http://deb.debian.org/debian unstable main"
+- sudo apt-get remove -y locales cloud-utils
+- sudo apt-get -qq update
+- sudo apt-get install -y lua${LUA_VERSION} liblua${LUA_VERSION}-dev
+
+script:
+- make PREFIX=/usr LUA_INCLUDE_DIR=/usr/include/lua${LUA_VERSION} && cp -r lua/cjson cjson.so tests && cd tests && lua${LUA_VERSION} -v && (lua${LUA_VERSION} test.lua | grep "^==> Test")
