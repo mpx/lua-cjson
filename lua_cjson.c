@@ -92,6 +92,7 @@
 #endif
 
 static const char * const *json_empty_array;
+static const char * const *json_array;
 
 typedef enum {
     T_OBJ_BEGIN,
@@ -713,21 +714,37 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     case LUA_TTABLE:
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
-        len = lua_array_length(l, cfg, json);
-        if (len > 0 || (len == 0 && !cfg->encode_empty_table_as_object))
-            json_append_array(l, cfg, current_depth, json, len);
-        else {
-            int as_array = 0;
-            if (lua_getmetatable(l, -1)) {
-                lua_pushlightuserdata(l, &json_empty_array);
-                lua_rawget(l, LUA_REGISTRYINDEX);
-                as_array = lua_rawequal(l, -1, -2);
-                lua_pop(l, 2);
-            }
 
-            if (as_array) {
-                json_append_array(l, cfg, current_depth, json, 0);
+        int as_array = 0;
+        int has_metatable = lua_getmetatable(l, -1);
+
+        if (has_metatable) {
+            lua_pushlightuserdata(l, &json_array);
+            lua_rawget(l, LUA_REGISTRYINDEX);
+            as_array = lua_rawequal(l, -1, -2);
+            lua_pop(l, 2);
+        }
+
+        if (as_array) {
+            len = lua_objlen(l, -1);
+            json_append_array(l, cfg, current_depth, json, len);
+        } else {
+            len = lua_array_length(l, cfg, json);
+
+            if (len > 0 || (len == 0 && !cfg->encode_empty_table_as_object)) {
+                json_append_array(l, cfg, current_depth, json, len);
             } else {
+                if (has_metatable) {
+                    lua_getmetatable(l, -1);
+                    lua_pushlightuserdata(l, &json_empty_array);
+                    lua_rawget(l, LUA_REGISTRYINDEX);
+                    as_array = lua_rawequal(l, -1, -2);
+                    lua_pop(l, 2); /* pop pointer + metatable */
+                    if (as_array) {
+                        json_append_array(l, cfg, current_depth, json, 0);
+                        break;
+                    }
+                }
                 json_append_object(l, cfg, current_depth, json);
             }
         }
@@ -738,7 +755,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     case LUA_TLIGHTUSERDATA:
         if (lua_touserdata(l, -1) == NULL) {
             strbuf_append_mem(json, "null", 4);
-        } else if (lua_touserdata(l, -1) == &json_empty_array) {
+        } else if (lua_touserdata(l, -1) == &json_array) {
             json_append_array(l, cfg, current_depth, json, 0);
         }
         break;
@@ -1412,18 +1429,25 @@ static int lua_cjson_new(lua_State *l)
     /* Initialise number conversions */
     fpconv_init();
 
-    /* Test if empty array metatable is in registry */
+    /* Test if array metatables are in registry */
     lua_pushlightuserdata(l, &json_empty_array);
     lua_rawget(l, LUA_REGISTRYINDEX);
     if (lua_isnil(l, -1)) {
-        /* Create empty array metatable.
+        /* Create array metatables.
          *
          * If multiple calls to lua_cjson_new() are made,
-         * this prevents overriding the table at the given
+         * this prevents overriding the tables at the given
          * registry's index with a new one.
          */
         lua_pop(l, 1);
+
+        /* empty_array_mt */
         lua_pushlightuserdata(l, &json_empty_array);
+        lua_newtable(l);
+        lua_rawset(l, LUA_REGISTRYINDEX);
+
+        /* array_mt */
+        lua_pushlightuserdata(l, &json_array);
         lua_newtable(l);
         lua_rawset(l, LUA_REGISTRYINDEX);
     }
@@ -1444,8 +1468,13 @@ static int lua_cjson_new(lua_State *l)
     lua_rawget(l, LUA_REGISTRYINDEX);
     lua_setfield(l, -2, "empty_array_mt");
 
+    /* Set cjson.array_mt */
+    lua_pushlightuserdata(l, &json_array);
+    lua_rawget(l, LUA_REGISTRYINDEX);
+    lua_setfield(l, -2, "array_mt");
+
     /* Set cjson.empty_array */
-    lua_pushlightuserdata(l, &json_empty_array);
+    lua_pushlightuserdata(l, &json_array);
     lua_setfield(l, -2, "empty_array");
 
     /* Set module name / version fields */

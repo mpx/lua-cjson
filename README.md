@@ -11,6 +11,7 @@ Table of Contents
 * [Additions to mpx/lua](#additions)
     * [encode_empty_table_as_object](#encode_empty_table_as_object)
     * [empty_array](#empty_array)
+    * [array_mt](#array_mt)
     * [empty_array_mt](#empty_array_mt)
     * [encode_number_precision](#encode_number_precision)
 
@@ -73,6 +74,39 @@ This will generate:
     "some_array": []
 }
 ```
+
+[Back to TOC](#table-of-contents)
+
+array_mt
+--------
+**syntax:** `setmetatable({}, cjson.array_mt)`
+
+When lua-cjson encodes a table with this metatable, it will systematically
+encode it as a JSON Array. The resulting, encoded Array will contain the array
+part of the table, and will be of the same length as the `#` operator on that
+table. Holes in the table will be encoded with the `null` JSON value.
+
+Example:
+
+```lua
+local t = { "hello", "world" }
+setmetatable(t, cjson.array_mt)
+cjson.encode(t) -- ["hello","world"]
+```
+
+Or:
+
+```lua
+local t = {}
+t[1] = "one"
+t[2] = "two"
+t[4] = "three"
+t.foo = "bar"
+setmetatable(t, cjson.array_mt)
+cjson.encode(t) -- ["one","two",null,"three"]
+```
+
+This value was introduced in the `2.1.0.5` release of this module.
 
 [Back to TOC](#table-of-contents)
 
