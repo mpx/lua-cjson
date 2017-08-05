@@ -14,6 +14,7 @@ Table of Contents
     * [array_mt](#array_mt)
     * [empty_array_mt](#empty_array_mt)
     * [encode_number_precision](#encode_number_precision)
+    * [decode_array_with_array_mt](#decode_array_with_array_mt)
 
 Description
 ===========
@@ -154,5 +155,41 @@ encode_number_precision
 **syntax:** `cjson.encode_number_precision(precision)`
 
 This fork allows encoding of numbers with a `precision` up to 16 decimals (vs. 14 in mpx/lua-cjson).
+
+[Back to TOC](#table-of-contents)
+
+decode_array_with_array_mt
+--------------------------
+**syntax:** `cjson.decode_array_with_array_mt(enabled)`
+
+**default:** false
+
+If enabled, JSON Arrays decoded by `cjson.decode` will result in Lua
+tables with the [`array_mt`](#array_mt) metatable. This can ensure a 1-to-1
+relationship between arrays upon multiple encoding/decoding of your
+JSON data with this module.
+
+If disabled, JSON Arrays will be decoded to plain Lua tables, without
+the `array_mt` metatable.
+
+The `enabled` argument is a boolean.
+
+Example:
+
+```lua
+local cjson = require "cjson"
+
+-- default behavior
+local my_json = [[{"my_array":[]}]]
+local t = cjson.decode(my_json)
+cjson.encode(t) -- {"my_array":{}} back to an object
+
+-- now, if this behavior is enabled
+cjson.decode_array_with_array_mt(true)
+
+local my_json = [[{"my_array":[]}]]
+local t = cjson.decode(my_json)
+cjson.encode(t) -- {"my_array":[]} properly re-encoded as an array
+```
 
 [Back to TOC](#table-of-contents)

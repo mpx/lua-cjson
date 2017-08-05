@@ -79,6 +79,7 @@
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
 #define DEFAULT_ENCODE_EMPTY_TABLE_AS_OBJECT 1
+#define DEFAULT_DECODE_ARRAY_WITH_ARRAY_MT 0
 
 #ifdef DISABLE_INVALID_NUMBERS
 #undef DEFAULT_DECODE_INVALID_NUMBERS
@@ -148,6 +149,7 @@ typedef struct {
 
     int decode_invalid_numbers;
     int decode_max_depth;
+    int decode_array_with_array_mt;
 } json_config_t;
 
 typedef struct {
@@ -329,6 +331,16 @@ static int json_cfg_encode_empty_table_as_object(lua_State *l)
     return json_enum_option(l, 1, &cfg->encode_empty_table_as_object, NULL, 1);
 }
 
+/* Configures how to decode arrays */
+static int json_cfg_decode_array_with_array_mt(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+
+    json_enum_option(l, 1, &cfg->decode_array_with_array_mt, NULL, 1);
+
+    return 1;
+}
+
 /* Configures JSON encoding buffer persistence */
 static int json_cfg_encode_keep_buffer(lua_State *l)
 {
@@ -420,6 +432,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
     cfg->encode_empty_table_as_object = DEFAULT_ENCODE_EMPTY_TABLE_AS_OBJECT;
+    cfg->decode_array_with_array_mt = DEFAULT_DECODE_ARRAY_WITH_ARRAY_MT;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
     strbuf_init(&cfg->encode_buf, 0);
@@ -1261,6 +1274,13 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
     lua_newtable(l);
 
+    /* set array_mt on the table at the top of the stack */
+    if (json->cfg->decode_array_with_array_mt) {
+        lua_pushlightuserdata(l, &json_array);
+        lua_rawget(l, LUA_REGISTRYINDEX);
+        lua_setmetatable(l, -2);
+    }
+
     json_next_token(json, &token);
 
     /* Handle empty arrays */
@@ -1415,6 +1435,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode", json_encode },
         { "decode", json_decode },
         { "encode_empty_table_as_object", json_cfg_encode_empty_table_as_object },
+        { "decode_array_with_array_mt", json_cfg_decode_array_with_array_mt },
         { "encode_sparse_array", json_cfg_encode_sparse_array },
         { "encode_max_depth", json_cfg_encode_max_depth },
         { "decode_max_depth", json_cfg_decode_max_depth },

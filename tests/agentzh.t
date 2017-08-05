@@ -153,7 +153,56 @@ print(cjson.encode(data))
 
 
 
-=== TEST 12: array_mt on tables with hash part
+=== TEST 12: decode() by default does not set array_mt on empty arrays
+--- lua
+local cjson = require "cjson"
+local json = [[{"my_array":[]}]]
+local t = cjson.decode(json)
+local has_metatable = getmetatable(t.my_array) == cjson.array_mt
+print("decoded JSON array has metatable: " .. tostring(has_metatable))
+print(cjson.encode(t))
+--- out
+decoded JSON array has metatable: false
+{"my_array":{}}
+
+
+
+=== TEST 13: decode() sets array_mt on non-empty arrays if enabled
+--- lua
+local cjson = require "cjson"
+cjson.decode_array_with_array_mt(true)
+local json = [[{"my_array":["hello","world"]}]]
+local t = cjson.decode(json)
+t.my_array.hash_value = "adding a hash value"
+-- emptying the array part
+t.my_array[1] = nil
+t.my_array[2] = nil
+local has_metatable = getmetatable(t.my_array) == cjson.array_mt
+print("decoded JSON array has metatable: " .. tostring(has_metatable))
+print(cjson.encode(t))
+--- out
+decoded JSON array has metatable: true
+{"my_array":[]}
+
+
+
+=== TEST 14: cfg can enable/disable setting array_mt
+--- lua
+local cjson = require "cjson"
+cjson.decode_array_with_array_mt(true)
+cjson.decode_array_with_array_mt(false)
+local json = [[{"my_array":[]}]]
+local t = cjson.decode(json)
+local has_metatable = getmetatable(t.my_array) == cjson.array_mt
+print("decoded JSON array has metatable: " .. tostring(has_metatable))
+print(cjson.encode(t))
+--- out
+decoded JSON array has metatable: false
+{"my_array":{}}
+
+
+
+=== TEST 15: array_mt on tables with hash part
 --- lua
 local cjson = require "cjson"
 local data
@@ -175,7 +224,7 @@ print(cjson.encode(data))
 
 
 
-=== TEST 13: multiple calls to lua_cjson_new (1/3)
+=== TEST 16: multiple calls to lua_cjson_new (1/3)
 --- lua
 local cjson = require "cjson"
 package.loaded["cjson"] = nil
@@ -187,7 +236,7 @@ print(cjson.encode(arr))
 
 
 
-=== TEST 14: multiple calls to lua_cjson_new (2/3)
+=== TEST 17: multiple calls to lua_cjson_new (2/3)
 --- lua
 local cjson = require "cjson"
 package.loaded["cjson"] = nil
@@ -199,7 +248,7 @@ print(cjson.encode(arr))
 
 
 
-=== TEST 15: multiple calls to lua_cjson_new (3/3)
+=== TEST 18: multiple calls to lua_cjson_new (3/3)
 --- lua
 local cjson = require "cjson.safe"
 -- load another cjson instance (not in package.loaded)
@@ -211,7 +260,7 @@ print(cjson.encode(arr))
 
 
 
-=== TEST 16: & in JSON
+=== TEST 19: & in JSON
 --- lua
 local cjson = require "cjson"
 local a="[\"a=1&b=2\"]"
@@ -222,7 +271,7 @@ print(cjson.encode(b))
 
 
 
-=== TEST 17: default and max precision
+=== TEST 20: default and max precision
 --- lua
 local math = require "math"
 local cjson = require "cjson"
