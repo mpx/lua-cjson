@@ -35,9 +35,9 @@ sub run_test ($) {
 
     if ($ENV{TEST_LUA_USE_VALGRIND}) {
         warn "$name\n";
-        @cmd =  ('valgrind', '-q', '--leak-check=full', 'lua', 'test_case.lua');
+        @cmd =  ('valgrind', '-q', '--leak-check=full', 'luajit', 'test_case.lua');
     } else {
-        @cmd =  ('lua', 'test_case.lua');
+        @cmd =  ('luajit', 'test_case.lua');
     }
 
     run3 \@cmd, undef, \$res, \$err;

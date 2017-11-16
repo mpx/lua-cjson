@@ -1,3 +1,6 @@
+# vim:ft=
+
+use lib '.';
 use TestLua;
 
 plan tests => 2 * blocks();

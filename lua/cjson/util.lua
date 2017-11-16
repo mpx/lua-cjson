@@ -189,8 +189,12 @@ local function run_test(testname, func, input, should_work, output)
         print(("[%s] %s"):format(name, serialise_value(value, false)))
     end
 
-    local result = { pcall(func, unpack(input)) }
-    local success = table.remove(result, 1)
+    local result = {}
+    local tmp = { pcall(func, unpack(input)) }
+    local success = tmp[1]
+    for i = 2, table.maxn(tmp) do
+        result[i - 1] = tmp[i]
+    end
 
     local correct = false
     if success == should_work and compare_values(result, output) then
