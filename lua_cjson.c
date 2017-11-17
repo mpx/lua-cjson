@@ -710,6 +710,8 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
                              int current_depth, strbuf_t *json)
 {
     int len;
+    int as_array = 0;
+    int has_metatable;
 
     switch (lua_type(l, -1)) {
     case LUA_TSTRING:
@@ -728,8 +730,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
 
-        int as_array = 0;
-        int has_metatable = lua_getmetatable(l, -1);
+        has_metatable = lua_getmetatable(l, -1);
 
         if (has_metatable) {
             lua_pushlightuserdata(l, &json_array);
