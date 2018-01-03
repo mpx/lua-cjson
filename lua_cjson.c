@@ -1380,13 +1380,14 @@ static int json_decode(lua_State *l)
 
 /* ===== INITIALISATION ===== */
 
-#if !defined(luaL_newlibtable) \
-    && (!defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502)
+#if !defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502
 /* Compatibility for Lua 5.1 and older LuaJIT.
  *
- * luaL_setfuncs() is used to create a module table where the functions have
- * json_config_t as their first upvalue. Code borrowed from Lua 5.2 source. */
-static void luaL_setfuncs (lua_State *l, const luaL_Reg *reg, int nup)
+ * compat_luaL_setfuncs() is used to create a module table where the functions
+ * have json_config_t as their first upvalue. Code borrowed from Lua 5.2
+ * source's luaL_setfuncs().
+ */
+static void compat_luaL_setfuncs(lua_State *l, const luaL_Reg *reg, int nup)
 {
     int i;
 
@@ -1399,6 +1400,8 @@ static void luaL_setfuncs (lua_State *l, const luaL_Reg *reg, int nup)
     }
     lua_pop(l, nup);  /* remove upvalues */
 }
+#else
+#define compat_luaL_setfuncs(L, reg, nup) luaL_setfuncs(L, reg, nup)
 #endif
 
 /* Call target function in protected mode with all supplied args.
@@ -1479,7 +1482,7 @@ static int lua_cjson_new(lua_State *l)
 
     /* Register functions with config data as upvalue */
     json_create_config(l);
-    luaL_setfuncs(l, reg, 1);
+    compat_luaL_setfuncs(l, reg, 1);
 
     /* Set cjson.null */
     lua_pushlightuserdata(l, NULL);
