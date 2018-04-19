@@ -51,7 +51,7 @@
 #endif
 
 #ifndef CJSON_VERSION
-#define CJSON_VERSION   "2.1devel"
+#define CJSON_VERSION   "2.1.0.6"
 #endif
 
 #ifdef _MSC_VER
