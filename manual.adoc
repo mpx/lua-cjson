@@ -364,7 +364,6 @@ Lua CJSON will escape the following characters within each UTF-8 string:
 
 - Control characters (ASCII 0 - 31)
 - Double quote (ASCII 34)
-- Forward slash (ASCII 47)
 - Blackslash (ASCII 92)
 - Delete (ASCII 127)
 
