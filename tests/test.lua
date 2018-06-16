@@ -413,6 +413,10 @@ local cjson_tests = {
     { "Decode (safe) error generation after new()",
       function(...) return json_safe.new().decode(...) end, { "Oops" },
       true, { nil, "Expected value but found invalid token at character 1" } },
+
+    { "Encode forward slash unescaped",
+      json.encode, {{ content={booths={custom0="https://t.co/a/b/c"}} }},
+      true, { '{"content":{"booths":{"custom0":"https://t.co/a/b/c"}}}' } },
 }
 
 print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))
