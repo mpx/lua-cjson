@@ -37,6 +37,7 @@
  */
 
 #include <assert.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include <limits.h>
@@ -91,6 +92,9 @@
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
 #endif
+
+#define json_lightudata_mask(ludata)                                         \
+    ((void *) ((uintptr_t) (ludata) & ((1UL << 47) - 1)))
 
 static const char * const *json_empty_array;
 static const char * const *json_array;
@@ -733,7 +737,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         has_metatable = lua_getmetatable(l, -1);
 
         if (has_metatable) {
-            lua_pushlightuserdata(l, &json_array);
+            lua_pushlightuserdata(l, json_lightudata_mask(&json_array));
             lua_rawget(l, LUA_REGISTRYINDEX);
             as_array = lua_rawequal(l, -1, -2);
             lua_pop(l, 2);
@@ -750,7 +754,8 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
             } else {
                 if (has_metatable) {
                     lua_getmetatable(l, -1);
-                    lua_pushlightuserdata(l, &json_empty_array);
+                    lua_pushlightuserdata(l, json_lightudata_mask(
+                                          &json_empty_array));
                     lua_rawget(l, LUA_REGISTRYINDEX);
                     as_array = lua_rawequal(l, -1, -2);
                     lua_pop(l, 2); /* pop pointer + metatable */
@@ -1277,7 +1282,7 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
     /* set array_mt on the table at the top of the stack */
     if (json->cfg->decode_array_with_array_mt) {
-        lua_pushlightuserdata(l, &json_array);
+        lua_pushlightuserdata(l, json_lightudata_mask(&json_array));
         lua_rawget(l, LUA_REGISTRYINDEX);
         lua_setmetatable(l, -2);
     }
@@ -1455,7 +1460,7 @@ static int lua_cjson_new(lua_State *l)
     fpconv_init();
 
     /* Test if array metatables are in registry */
-    lua_pushlightuserdata(l, &json_empty_array);
+    lua_pushlightuserdata(l, json_lightudata_mask(&json_empty_array));
     lua_rawget(l, LUA_REGISTRYINDEX);
     if (lua_isnil(l, -1)) {
         /* Create array metatables.
@@ -1467,12 +1472,12 @@ static int lua_cjson_new(lua_State *l)
         lua_pop(l, 1);
 
         /* empty_array_mt */
-        lua_pushlightuserdata(l, &json_empty_array);
+        lua_pushlightuserdata(l, json_lightudata_mask(&json_empty_array));
         lua_newtable(l);
         lua_rawset(l, LUA_REGISTRYINDEX);
 
         /* array_mt */
-        lua_pushlightuserdata(l, &json_array);
+        lua_pushlightuserdata(l, json_lightudata_mask(&json_array));
         lua_newtable(l);
         lua_rawset(l, LUA_REGISTRYINDEX);
     }
@@ -1489,17 +1494,17 @@ static int lua_cjson_new(lua_State *l)
     lua_setfield(l, -2, "null");
 
     /* Set cjson.empty_array_mt */
-    lua_pushlightuserdata(l, &json_empty_array);
+    lua_pushlightuserdata(l, json_lightudata_mask(&json_empty_array));
     lua_rawget(l, LUA_REGISTRYINDEX);
     lua_setfield(l, -2, "empty_array_mt");
 
     /* Set cjson.array_mt */
-    lua_pushlightuserdata(l, &json_array);
+    lua_pushlightuserdata(l, json_lightudata_mask(&json_array));
     lua_rawget(l, LUA_REGISTRYINDEX);
     lua_setfield(l, -2, "array_mt");
 
     /* Set cjson.empty_array */
-    lua_pushlightuserdata(l, &json_array);
+    lua_pushlightuserdata(l, json_lightudata_mask(&json_array));
     lua_setfield(l, -2, "empty_array");
 
     /* Set module name / version fields */
