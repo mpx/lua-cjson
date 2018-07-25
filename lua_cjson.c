@@ -696,11 +696,22 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     case LUA_TTABLE:
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
-        len = lua_array_length(l, cfg, json);
-        if (len > 0)
+        if (luaL_getmetafield(l, -1, "__len") != LUA_TNIL) {
+            lua_pushvalue(l, -2);
+            lua_call(l, 1, 1);
+            if (!lua_isinteger(l, -1)) {
+                luaL_error(l, "__len should return integer");
+            }
+            len = lua_tointeger(l, -1);
+            lua_pop(l, 1);
             json_append_array(l, cfg, current_depth, json, len);
-        else
-            json_append_object(l, cfg, current_depth, json);
+        } else {
+            len = lua_array_length(l, cfg, json);
+            if (len > 0)
+                json_append_array(l, cfg, current_depth, json, len);
+            else
+                json_append_object(l, cfg, current_depth, json);
+        }
         break;
     case LUA_TNIL:
         strbuf_append_mem(json, "null", 4);
