@@ -46,6 +46,10 @@
 #include "strbuf.h"
 #include "fpconv.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define strncasecmp _strnicmp
+#endif
+
 #ifndef CJSON_MODNAME
 #define CJSON_MODNAME   "cjson"
 #endif
