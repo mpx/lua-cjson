@@ -20,10 +20,11 @@ jobs:
 
     - uses: leafo/gh-actions-luarocks@v2
 
+    - name: test
+      run: |
+        ./runtests.sh
+
     - name: build
       run: |
         luarocks make
 
-    - name: test
-      run: |
-        ./runtests.sh
