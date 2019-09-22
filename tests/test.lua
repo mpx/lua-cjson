@@ -293,7 +293,12 @@ local cjson_tests = {
       true, { '["one",null,null,"sparse test"]' } },
     { "Encode sparse array as object",
       json.encode, { { [1] = "one", [5] = "sparse test" } },
-      true, { '{"5":"sparse test","1":"one"}' } },
+      true, {
+          util.one_of{
+              '{"5":"sparse test","1":"one"}',
+              '{"1":"one","5":"sparse test"}'
+          }
+      } },
     { "Encode table with numeric string key as object",
       json.encode, { { ["2"] = "numeric string key test" } },
       true, { '{"2":"numeric string key test"}' } },
