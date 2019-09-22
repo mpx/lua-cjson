@@ -2,6 +2,16 @@ local json = require "cjson"
 
 local unpack = unpack or table.unpack
 
+local maxn = table.maxn or function(t)
+    local max = 0
+    for k,v in pairs(t) do
+        if type(k) == "number" and k > max then
+            max = k
+        end
+    end
+    return max
+end
+
 -- Various common routines used by the Lua CJSON package
 --
 -- Mark Pulford <mark@kyne.com.au>
@@ -194,7 +204,7 @@ local function run_test(testname, func, input, should_work, output)
     local result = {}
     local tmp = { pcall(func, unpack(input)) }
     local success = tmp[1]
-    for i = 2, table.maxn(tmp) do
+    for i = 2, maxn(tmp) do
         result[i - 1] = tmp[i]
     end
 
