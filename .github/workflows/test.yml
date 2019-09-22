@@ -27,9 +27,21 @@ jobs:
 
     - uses: leafo/gh-actions-luarocks@v2
 
-    - name: test
+    - name: runtests.sh
       run: |
         LUA_DIR=.lua ${{ matrix.runtestEnv }} ./runtests.sh PREFIX=.lua ${{ matrix.runtestArgs }}
+
+    - name: setup prove
+      run: |
+        make PREFIX=.lua ${{ matrix.runtestArgs }}
+        sudo apt-get install valgrind libipc-run3-perl cppcheck cpanminus
+        sudo cpanm --notest Test::Base Test::LongString
+
+    - name: prove
+      run: LUA_BIN=lua prove -Itests tests
+
+    - name: prove (valgrind)
+      run: LUA_BIN=lua TEST_LUA_USE_VALGRIND=1 prove -Itests tests
 
     - name: build
       run: |
