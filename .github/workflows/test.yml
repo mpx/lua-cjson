@@ -10,9 +10,11 @@ jobs:
         luaVersion: ["5.1", "5.2", "5.3", "luajit", "luajit-openresty"]
         include:
           - luaVersion: "luajit"
-            luaIncludeDir: "LUA_INCLUDE_DIR=.lua/include/luajit-2.1"
+            runtestArgs: "LUA_INCLUDE_DIR=.lua/include/luajit-2.1"
+            runtestEnv: "SKIP_CMAKE=1"
           - luaVersion: "luajit-openresty"
-            luaIncludeDir: "LUA_INCLUDE_DIR=.lua/include/luajit-2.1"
+            runtestArgs: "LUA_INCLUDE_DIR=.lua/include/luajit-2.1"
+            runtestEnv: "SKIP_CMAKE=1"
 
     runs-on: ubuntu-latest
 
@@ -27,7 +29,7 @@ jobs:
 
     - name: test
       run: |
-        LUA_DIR=.lua ./runtests.sh PREFIX=.lua ${{ matrix.luaIncludeDir }}
+        LUA_DIR=.lua ${{ matrix.runtestEnv }} ./runtests.sh PREFIX=.lua ${{ matrix.runtestArgs }}
 
     - name: build
       run: |

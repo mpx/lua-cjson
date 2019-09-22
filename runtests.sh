@@ -56,14 +56,20 @@ do_tests
 make clean
 rm -rf tests/cjson{,.so}
 
-echo "===== Testing Cmake build ====="
-mkdir build
-cd build
-cmake ..
-make
-cd ..
-cp -r lua/cjson build/cjson.so tests
-do_tests
-rm -rf build tests/cjson{,.so}
+
+if [ -z "$SKIP_CMAKE" ]; then
+    echo "===== Testing Cmake build ====="
+    mkdir build
+    cd build
+    cmake ..
+    make
+    cd ..
+    cp -r lua/cjson build/cjson.so tests
+    do_tests
+    rm -rf build tests/cjson{,.so}
+else
+    echo "===== Skipping Cmake build ====="
+fi
+
 
 # vi:ai et sw=4 ts=4:
