@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
+set -eo pipefail
 
 PLATFORM="`uname -s`"
 [ "$1" ] && VERSION="$1" || VERSION="2.1devel"
 
-set -e
 
 # Portable "ggrep -A" replacement.
 # Work around Solaris awk record limit of 2559 bytes.
