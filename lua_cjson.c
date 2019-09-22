@@ -36,6 +36,9 @@
  *       difficult to know object/array sizes ahead of time.
  */
 
+
+#define LUA_COMPAT_ALL 1
+
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
