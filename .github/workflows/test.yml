@@ -7,6 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        cc: ["gcc", "clang"]
         luaVersion: ["5.1", "5.2", "5.3", "luajit", "luajit-openresty"]
         include:
           - luaVersion: "luajit"
@@ -21,17 +22,24 @@ jobs:
     steps:
     - uses: actions/checkout@master
 
-    - uses: leafo/gh-actions-lua@v3
+    - uses: leafo/gh-actions-lua@master
+      env:
+        CC: ${{ matrix.cc }}
       with:
         luaVersion: ${{ matrix.luaVersion }}
+        luaCompileFlags: CC=${{ matrix.cc }}
 
     - uses: leafo/gh-actions-luarocks@v2
 
     - name: runtests.sh
+      env:
+        CC: ${{ matrix.cc }}
       run: |
         LUA_DIR=.lua ${{ matrix.runtestEnv }} ./runtests.sh PREFIX=.lua ${{ matrix.runtestArgs }}
 
     - name: setup prove
+      env:
+        CC: ${{ matrix.cc }}
       run: |
         make PREFIX=.lua ${{ matrix.runtestArgs }}
         sudo apt-get install -q valgrind libipc-run3-perl cppcheck cpanminus
