@@ -34,8 +34,11 @@ jobs:
     - name: setup prove
       run: |
         make PREFIX=.lua ${{ matrix.runtestArgs }}
-        sudo apt-get install valgrind libipc-run3-perl cppcheck cpanminus
+        sudo apt-get install -q valgrind libipc-run3-perl cppcheck cpanminus
         sudo cpanm --notest Test::Base Test::LongString
+
+    - name: cppcheck
+      run: cppcheck -I .lua/include -i .lua/ -i .install/ --force --error-exitcode=1 --enable=warning .
 
     - name: prove
       run: LUA_BIN=lua prove -Itests tests
