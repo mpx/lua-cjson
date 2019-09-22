@@ -22,7 +22,7 @@ jobs:
 
     - name: test
       run: |
-        ./runtests.sh
+        ./runtests.sh PREFIX=.lua
 
     - name: build
       run: |

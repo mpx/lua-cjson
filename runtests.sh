@@ -50,7 +50,7 @@ luarocks remove --local lua-cjson
 make clean
 
 echo "===== Testing Makefile build ====="
-make
+make "$@"
 cp -r lua/cjson cjson.so tests
 do_tests
 make clean
