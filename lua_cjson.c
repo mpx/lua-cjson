@@ -38,6 +38,7 @@
 
 
 #define LUA_COMPAT_ALL 1
+#define LUA_COMPAT_5_1 1
 
 #include <assert.h>
 #include <stdint.h>
