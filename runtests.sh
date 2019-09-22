@@ -39,7 +39,7 @@ then
 Please ensure you do not have the Lua CJSON module installed before
 running these tests.
 EOT
-    exit
+    exit 1
 fi
 cd ..
 
