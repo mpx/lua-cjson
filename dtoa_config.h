@@ -24,7 +24,7 @@
 #define IEEE_8087
 #endif
 
-#define MALLOC(n)   xmalloc(n)
+#define MALLOC xmalloc
 
 static void *xmalloc(size_t size)
 {
