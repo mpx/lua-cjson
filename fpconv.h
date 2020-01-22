@@ -9,9 +9,11 @@
 #ifdef USE_INTERNAL_FPCONV
 #ifdef MULTIPLE_THREADS
 #include "dtoa_config.h"
+#include <unistd.h>
 static inline void fpconv_init()
 {
-    set_dtoa_pool(30);
+    // Add one to try and avoid core id multiplier alignment
+    set_dtoa_pool((sysconf(_SC_NPROCESSORS_CONF) + 1) * 3);
 }
 #else
 static inline void fpconv_init()
