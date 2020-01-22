@@ -50,6 +50,10 @@ static pthread_mutex_t private_dtoa_lock[2] = {
     PTHREAD_MUTEX_INITIALIZER
 };
 
+#define dtoa_get_threadno pthread_self
+
+void set_dtoa_pool(unsigned int n);
+
 #define ACQUIRE_DTOA_LOCK(n)    do {                                \
     int r = pthread_mutex_lock(&private_dtoa_lock[n]);              \
     if (r) {                                                        \
