@@ -209,6 +209,8 @@
  *	used for input more than STRTOD_DIGLIM digits long (default 40).
  */
 
+#include "dtoa_config.h"
+
 #ifndef Long
 #define Long int
 #endif
@@ -1502,7 +1504,7 @@ static unsigned int maxthreads = 0;
 #define Kmax 7
 
 #ifdef __cplusplus
-extern "C" double strtod(const char *s00, char **se);
+extern "C" double fpconv_strtod(const char *s00, char **se);
 extern "C" char *dtoa(double d, int mode, int ndigits,
 			int *decpt, int *sign, char **rve);
 #endif
@@ -3429,7 +3431,7 @@ retlow1:
 #endif /* NO_STRTOD_BIGCOMP */
 
  double
-strtod(const char *s00, char **se)
+fpconv_strtod(const char *s00, char **se)
 {
 	int bb2, bb5, bbe, bd2, bd5, bbbits, bs2, c, e, e1;
 	int esign, i, j, k, nd, nd0, nf, nz, nz0, nz1, sign;
