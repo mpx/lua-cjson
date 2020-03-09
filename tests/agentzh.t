@@ -284,3 +284,22 @@ print(string.format("%16.0f", cjson.decode("9007199254740992")))
 9.007199254741e+15
 9007199254740992
 9007199254740992
+
+
+
+=== TEST 21: / in string
+--- lua
+local cjson = require "cjson"
+local a={test = "http://google.com/google"}
+local b=cjson.encode(a)
+print(b)
+cjson.encode_escape_forward_slash(false)
+local b=cjson.encode(a)
+print(b)
+cjson.encode_escape_forward_slash(true)
+local b=cjson.encode(a)
+print(b)
+--- out
+{"test":"http:\/\/google.com\/google"}
+{"test":"http://google.com/google"}
+{"test":"http:\/\/google.com\/google"}

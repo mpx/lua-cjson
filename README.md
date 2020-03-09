@@ -14,6 +14,7 @@ Table of Contents
     * [array_mt](#array_mt)
     * [empty_array_mt](#empty_array_mt)
     * [encode_number_precision](#encode_number_precision)
+    * [encode_escape_forward_slash](#encode_escape_forward_slash)
     * [decode_array_with_array_mt](#decode_array_with_array_mt)
 
 Description
@@ -155,6 +156,18 @@ encode_number_precision
 **syntax:** `cjson.encode_number_precision(precision)`
 
 This fork allows encoding of numbers with a `precision` up to 16 decimals (vs. 14 in mpx/lua-cjson).
+
+[Back to TOC](#table-of-contents)
+
+encode_escape_forward_slash
+---------------------------
+**syntax:** `cjson.encode_escape_forward_slash(enabled)`
+
+**default:** true
+
+If enabled, forward slash '/' will be encoded as '\/'.
+
+If disabled, forward slash '/' will be encoded as '/' (no escape is applied).
 
 [Back to TOC](#table-of-contents)
 
