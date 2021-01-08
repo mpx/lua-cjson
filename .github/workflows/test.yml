@@ -1,6 +1,6 @@
 name: test
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   test:
@@ -29,7 +29,7 @@ jobs:
         luaVersion: ${{ matrix.luaVersion }}
         luaCompileFlags: CC=${{ matrix.cc }}
 
-    - uses: leafo/gh-actions-luarocks@v2
+    - uses: leafo/gh-actions-luarocks@master
 
     - name: runtests.sh
       env:
@@ -42,6 +42,7 @@ jobs:
         CC: ${{ matrix.cc }}
       run: |
         make PREFIX=.lua ${{ matrix.runtestArgs }}
+        sudo apt-get update
         sudo apt-get install -q valgrind libipc-run3-perl cppcheck cpanminus
         sudo cpanm --notest Test::Base Test::LongString
 
