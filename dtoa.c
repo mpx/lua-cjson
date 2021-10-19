@@ -2451,10 +2451,10 @@ retlow1:
 		if ((j = ((word0(rv) & Exp_mask) >> Exp_shift) - bc->scale) <= 0) {
 			i = 1 - j;
 			if (i <= 31) {
-				if (word1(rv) & (0x1 << i))
+				if (word1(rv) & (0x1U << i))
 					goto odd;
 				}
-			else if (word0(rv) & (0x1 << (i-32)))
+			else if (word0(rv) & (0x1U << (i-32)))
 				goto odd;
 			}
 		else if (word1(rv) & 1) {
@@ -2488,7 +2488,11 @@ fpconv_strtod
 	U aadj2, adj, rv, rv0;
 	ULong y, z;
 	BCinfo bc;
-	Bigint *bb, *bb1, *bd, *bd0, *bs, *delta;
+	Bigint *bb1, *bd0;
+	Bigint *bb = NULL;
+	Bigint *bd = NULL;
+	Bigint *bs = NULL;
+	Bigint *delta = NULL;
 #ifdef Avoid_Underflow
 	ULong Lsb, Lsb1;
 #endif
