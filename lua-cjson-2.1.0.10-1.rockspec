@@ -34,6 +34,9 @@ build = {
 -- Uncomment the line below on Solaris platforms if required.
 --                "USE_INTERNAL_ISINF"
             }
+        },
+        ["cjson.safe"] = {
+            sources = { "lua_cjson.c", "strbuf.c", "fpconv.c" }
         }
     },
     install = {
