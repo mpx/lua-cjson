@@ -800,7 +800,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     case LUA_TLIGHTUSERDATA:
         if (lua_touserdata(l, -1) == NULL) {
             strbuf_append_mem(json, "null", 4);
-        } else if (lua_touserdata(l, -1) == &json_array) {
+        } else if (lua_touserdata(l, -1) == json_lightudata_mask(&json_array)) {
             json_append_array(l, cfg, current_depth, json, 0);
         }
         break;
