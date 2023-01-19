@@ -1,9 +1,9 @@
 package = "lua-cjson"
-version = "2.1.0.10-1"
+version = "2.1.0.11-1"
 
 source = {
     url = "git+https://github.com/openresty/lua-cjson",
-    tag = "2.1.0.10",
+    tag = "2.1.0.11",
 }
 
 description = {
