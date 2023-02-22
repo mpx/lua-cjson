@@ -7,12 +7,12 @@
 # define FPCONV_G_FMT_BUFSIZE   32
 
 #ifdef USE_INTERNAL_FPCONV
-static inline void fpconv_init()
+static inline void fpconv_init(void)
 {
     /* Do nothing - not required */
 }
 #else
-extern void fpconv_init();
+extern void fpconv_init(void);
 #endif
 
 extern int fpconv_g_fmt(char*, double, int);
