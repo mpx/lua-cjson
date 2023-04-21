@@ -413,6 +413,30 @@ local cjson_tests = {
     { "Decode (safe) error generation after new()",
       function(...) return json_safe.new().decode(...) end, { "Oops" },
       true, { nil, "Expected value but found invalid token at character 1" } },
+
+    { "Decode/Encode empty array",
+      function()
+          local t = json.decode [[
+            { "a":[] }
+          ]]
+          local meta = getmetatable(assert(t).a)
+          if meta ~= "table" or meta.__type ~= "array" then
+              return false, "Expected empty array to have metatable"
+          end
+
+          meta = getmetatable(t)
+          if meta == "table" and meta.__type == "array" then
+              return false, "Expected object to not have array metatable"
+          end
+
+          local s = json.encode({ a = {setmetatable({}, { __type = "array" })} })
+          if s ~= [[{"a":[]}]] then
+              return false, "Expected empty array to be encoded as '[]'"
+          end
+
+          return true
+      end,
+      true, { true } },
 }
 
 print(("==> Testing Lua CJSON version %s\n"):format(json._VERSION))

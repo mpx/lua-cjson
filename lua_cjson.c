@@ -74,6 +74,7 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
+#define META_ARRAY "cjson.array"
 
 #ifdef DISABLE_INVALID_NUMBERS
 #undef DEFAULT_DECODE_INVALID_NUMBERS
@@ -537,6 +538,24 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
     return max;
 }
 
+static int lua_is_array(lua_State *l, json_config_t *cfg, strbuf_t *json)
+{
+    /* Check for array metatable */
+    /* We don directly compare to the table */
+    /* so it's possible to cooperate with the other libs' metatable */
+    if(lua_getmetatable(l, -1) && lua_getfield(l, -1, "__type") && lua_isstring(l, -1)) {
+        size_t len;
+        const char *str = lua_tolstring(l, -1, &len);
+        lua_pop(l, 2);
+        
+        if(len == 5 && !memcmp(str, "array", 5)) {
+            return true;
+        }
+    }
+
+    return lua_array_length(l, cfg, json) > 0;
+}
+
 static void json_check_encode_depth(lua_State *l, json_config_t *cfg,
                                     int current_depth, strbuf_t *json)
 {
@@ -672,8 +691,6 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
 static void json_append_data(lua_State *l, json_config_t *cfg,
                              int current_depth, strbuf_t *json)
 {
-    int len;
-
     switch (lua_type(l, -1)) {
     case LUA_TSTRING:
         json_append_string(l, json, -1);
@@ -690,8 +707,7 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
     case LUA_TTABLE:
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
-        len = lua_array_length(l, cfg, json);
-        if (len > 0)
+        if (lua_is_array(l, cfg, json))
             json_append_array(l, cfg, current_depth, json, len);
         else
             json_append_object(l, cfg, current_depth, json);
@@ -1205,6 +1221,8 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
     json_decode_descend(l, json, 2);
 
     lua_newtable(l);
+    luaL_getmetatable(L, META_ARRAY);
+    lua_setmetatable(l, -2);
 
     json_next_token(json, &token);
 
@@ -1388,6 +1406,15 @@ static int lua_cjson_new(lua_State *l)
     lua_setfield(l, -2, "_NAME");
     lua_pushliteral(l, CJSON_VERSION);
     lua_setfield(l, -2, "_VERSION");
+
+    /* metatable for array objects */
+    if (luaL_newmetatable(L, META_ARRAY)) {
+        lua_pushstring(L, "array");
+        lua_setfield(L, -2, "__type");
+    }
+
+    luaL_getmetatable(L, META_ARRAY);
+    lua_setfield(L, -2, "array_meta");
 
     return 1;
 }
