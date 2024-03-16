@@ -5,7 +5,7 @@
 --
 -- Your Mileage May Vary.
 --
--- Mark Pulford <mark@kyne.com.au>
+-- Mark Pulford <mark@kyne.au>
 
 local json_module = os.getenv("JSON_MODULE") or "cjson"
 

@@ -2,7 +2,7 @@ package = "lua-cjson"
 version = "2.1devel-1"
 
 source = {
-    url = "http://www.kyne.com.au/~mark/software/download/lua-cjson-2.1devel.zip",
+    url = "http://www.kyne.au/~mark/software/download/lua-cjson-2.1devel.zip",
 }
 
 description = {
@@ -15,7 +15,7 @@ description = {
           (infinity, NaN,..)
         - No dependencies on other libraries
     ]],
-    homepage = "http://www.kyne.com.au/~mark/software/lua-cjson.php",
+    homepage = "http://www.kyne.au/~mark/software/lua-cjson.php",
     license = "MIT"
 }
 

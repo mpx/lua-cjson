@@ -9,8 +9,8 @@ Summary:	A fast JSON encoding/parsing module for Lua
 
 Group:		Development/Libraries
 License:	MIT
-URL:		http://www.kyne.com.au/~mark/software/lua-cjson/
-Source0:	http://www.kyne.com.au/~mark/software/lua-cjson/download/lua-cjson-%{version}.tar.gz
+URL:		http://www.kyne.au/~mark/software/lua-cjson/
+Source0:	http://www.kyne.au/~mark/software/lua-cjson/download/lua-cjson-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	lua >= %{luaver}, lua-devel >= %{luaver}
@@ -57,24 +57,24 @@ rm -rf "$RPM_BUILD_ROOT"
 
 
 %changelog
-* Thu Mar 1 2012 Mark Pulford <mark@kyne.com.au> - 2.1.0-1
+* Thu Mar 1 2012 Mark Pulford <mark@kyne.au> - 2.1.0-1
 - Update for 2.1.0
 
-* Sun Jan 22 2012 Mark Pulford <mark@kyne.com.au> - 2.0.0-1
+* Sun Jan 22 2012 Mark Pulford <mark@kyne.au> - 2.0.0-1
 - Update for 2.0.0
 - Install lua2json / json2lua utilities
 
-* Wed Nov 27 2011 Mark Pulford <mark@kyne.com.au> - 1.0.4-1
+* Wed Nov 27 2011 Mark Pulford <mark@kyne.au> - 1.0.4-1
 - Update for 1.0.4
 
-* Wed Sep 15 2011 Mark Pulford <mark@kyne.com.au> - 1.0.3-1
+* Wed Sep 15 2011 Mark Pulford <mark@kyne.au> - 1.0.3-1
 - Update for 1.0.3
 
-* Sun May 29 2011 Mark Pulford <mark@kyne.com.au> - 1.0.2-1
+* Sun May 29 2011 Mark Pulford <mark@kyne.au> - 1.0.2-1
 - Update for 1.0.2
 
-* Sun May 10 2011 Mark Pulford <mark@kyne.com.au> - 1.0.1-1
+* Sun May 10 2011 Mark Pulford <mark@kyne.au> - 1.0.1-1
 - Update for 1.0.1
 
-* Sun May 1 2011 Mark Pulford <mark@kyne.com.au> - 1.0-1
+* Sun May 1 2011 Mark Pulford <mark@kyne.au> - 1.0-1
 - Initial package

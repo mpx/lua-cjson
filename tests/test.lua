@@ -2,7 +2,7 @@
 
 -- Lua CJSON tests
 --
--- Mark Pulford <mark@kyne.com.au>
+-- Mark Pulford <mark@kyne.au>
 --
 -- Note: The output of this script is easier to read with "less -S"
 

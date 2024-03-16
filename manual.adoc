@@ -1,5 +1,5 @@
 = Lua CJSON 2.1devel Manual =
-Mark Pulford <mark@kyne.com.au>
+Mark Pulford <mark@kyne.au>
 :revdate: August 2016
 
 Overview
@@ -21,7 +21,7 @@ Lua CJSON is covered by the MIT license. Review the file +LICENSE+ for
 details.
 
 The current stable version of this software is available from the
-http://www.kyne.com.au/%7Emark/software/lua-cjson.php[Lua CJSON website].
+http://www.kyne.au/%7Emark/software/lua-cjson.php[Lua CJSON website].
 
 Feel free to email me if you have any patches, suggestions, or comments.
 

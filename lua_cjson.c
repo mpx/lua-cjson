@@ -1,6 +1,6 @@
 /* Lua CJSON - JSON support for Lua
  *
- * Copyright (c) 2010-2012  Mark Pulford <mark@kyne.com.au>
+ * Copyright (c) 2010-2012  Mark Pulford <mark@kyne.au>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
