@@ -5,3 +5,6 @@ notes
 packages
 tags
 tests/utf8.dat
+*~
+*.swp
+go
