@@ -65,6 +65,10 @@
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
 #endif
 
+#if LUA_VERSION_NUM > 501
+#define lua_lessthan(l, a, b) (lua_compare((l), (a), (b), LUA_OPLT))
+#endif
+
 #define DEFAULT_SPARSE_CONVERT 0
 #define DEFAULT_SPARSE_RATIO 2
 #define DEFAULT_SPARSE_SAFE 10
@@ -74,6 +78,7 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
+#define DEFAULT_ENCODE_SORT_KEYS 0
 
 #ifdef DISABLE_INVALID_NUMBERS
 #undef DEFAULT_DECODE_INVALID_NUMBERS
@@ -130,6 +135,7 @@ typedef struct {
     int encode_invalid_numbers;     /* 2 => Encode as "null" */
     int encode_number_precision;
     int encode_keep_buffer;
+    int encode_sort_keys;
 
     int decode_invalid_numbers;
     int decode_max_depth;
@@ -327,6 +333,14 @@ static int json_cfg_encode_keep_buffer(lua_State *l)
     return 1;
 }
 
+/* Configures whether object keys are sorted when encoding */
+static int json_cfg_encode_sort_keys(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+
+    return json_enum_option(l, 1, &cfg->encode_sort_keys, NULL, 1);
+}
+
 #if defined(DISABLE_INVALID_NUMBERS) && !defined(USE_INTERNAL_FPCONV)
 void json_verify_invalid_number_setting(lua_State *l, int *setting)
 {
@@ -396,6 +410,7 @@ static void json_create_config(lua_State *l)
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
+    cfg->encode_sort_keys = DEFAULT_ENCODE_SORT_KEYS;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
     strbuf_init(&cfg->encode_buf, 0);
@@ -627,24 +642,66 @@ static void json_append_number(lua_State *l, json_config_t *cfg,
     strbuf_extend_length(json, len);
 }
 
+static void sort_lua_stack(lua_State *l, int lo, int hi)
+{
+    if (lo >= hi)
+        return;
+
+    int i = lo - 1;
+    int j = hi + 1;
+
+    lua_pushvalue(l, lo);
+
+    while (1) {
+        while (lua_lessthan(l, -1, ++i));
+        while (lua_lessthan(l, --j, -1));
+        if (i >= j)
+            break;
+
+        lua_pushvalue(l, i);
+        lua_pushvalue(l, j);
+        lua_replace(l, i);
+        lua_replace(l, j);
+    }
+
+    lua_pop(l, 1);
+
+    sort_lua_stack(l, lo, j);
+    sort_lua_stack(l, j + 1, hi);
+}
+
 static void json_append_object(lua_State *l, json_config_t *cfg,
                                int current_depth, strbuf_t *json)
 {
     int comma, keytype;
+    int sort = cfg->encode_sort_keys;
+    int tbl_index = lua_gettop(l);
 
     /* Object */
     strbuf_append_char(json, '{');
 
     lua_pushnil(l);
-    /* table, startkey */
+
+    if (sort) {
+        while (lua_next(l, tbl_index)) {
+            lua_pop(l, 1);
+            lua_pushvalue(l, -1);
+        }
+        sort_lua_stack(l, tbl_index + 1, lua_gettop(l));
+    }
+
     comma = 0;
-    while (lua_next(l, -2) != 0) {
+    while (sort ? lua_gettop(l) > tbl_index : lua_next(l, tbl_index)) {
         if (comma)
             strbuf_append_char(json, ',');
         else
             comma = 1;
 
-        /* table, key, value */
+        if (sort) {
+            lua_pushvalue(l, -1);
+            lua_gettable(l, tbl_index);
+        }
+
         keytype = lua_type(l, -2);
         if (keytype == LUA_TNUMBER) {
             strbuf_append_char(json, '"');
@@ -659,10 +716,8 @@ static void json_append_object(lua_State *l, json_config_t *cfg,
             /* never returns */
         }
 
-        /* table, key, value */
         json_append_data(l, cfg, current_depth, json);
-        lua_pop(l, 1);
-        /* table, key */
+        lua_pop(l, sort ? 2 : 1);
     }
 
     strbuf_append_char(json, '}');
@@ -1365,6 +1420,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+        { "encode_sort_keys", json_cfg_encode_sort_keys },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };
