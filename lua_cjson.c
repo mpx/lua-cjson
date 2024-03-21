@@ -447,6 +447,14 @@ static void json_create_config(lua_State *l)
     cfg->escape2char['u'] = 'u';          /* Unicode parsing required */
 }
 
+/* Whether to escape forward slashes */
+static int json_escape_forward_slash(lua_State *l)
+{
+    lua_Integer escape_forward_slash = luaL_checkinteger(l, 1);
+    char2escape['/'] = escape_forward_slash ? "\\/" : NULL;
+    return 0;
+}
+
 /* ===== ENCODING ===== */
 
 static void json_encode_exception(lua_State *l, json_config_t *cfg, strbuf_t *json, int lindex,
@@ -1365,6 +1373,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+        { "escape_forward_slash", json_escape_forward_slash },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };
