@@ -20,7 +20,7 @@ Please read +manual.adoc+ for installation instructions and the API
 manual.
 
 The current stable version of this software is available from the
-http://www.kyne.au/%7Emark/software/lua-cjson.php[Lua CJSON website].
+https://kyne.au/%7Emark/software/lua-cjson.php[Lua CJSON website].
 
 Feel free to email me if you have any patches, suggestions, or comments.
 

@@ -21,7 +21,7 @@ Lua CJSON is covered by the MIT license. Review the file +LICENSE+ for
 details.
 
 The current stable version of this software is available from the
-http://www.kyne.au/%7Emark/software/lua-cjson.php[Lua CJSON website].
+https://kyne.au/%7Emark/software/lua-cjson.php[Lua CJSON website].
 
 Feel free to email me if you have any patches, suggestions, or comments.
 
@@ -29,8 +29,8 @@ Feel free to email me if you have any patches, suggestions, or comments.
 Installation
 ------------
 
-Lua CJSON requires either http://www.lua.org[Lua] 5.1, Lua 5.2, Lua 5.3,
-or http://www.luajit.org[LuaJIT] to build.
+Lua CJSON requires either https://lua.org[Lua] 5.1, Lua 5.2, Lua 5.3,
+or https://luajit.org[LuaJIT] to build.
 
 The build method can be selected from 4 options:
 
@@ -63,7 +63,7 @@ cp cjson.so $LUA_MODULE_DIRECTORY
 CMake
 ~~~~~
 
-http://www.cmake.org[CMake] can generate build configuration for many
+https://cmake.org[CMake] can generate build configuration for many
 different platforms (including Unix and Windows).
 
 First, generate the makefile for your platform using CMake. If CMake is
@@ -88,14 +88,14 @@ make
 cp cjson.so $LUA_MODULE_DIRECTORY
 
 Review the
-http://www.cmake.org/cmake/help/documentation.html[CMake documentation]
+https://cmake.org/documentation/[CMake documentation]
 for further details.
 
 
 RPM
 ~~~
 
-Linux distributions using http://rpm.org[RPM] can create a package via
+Linux distributions using https://rpm.org[RPM] can create a package via
 the included RPM spec file. Ensure the +rpm-build+ package (or similar)
 has been installed.
 
@@ -109,7 +109,7 @@ rpm -Uvh $LUA_CJSON_RPM
 LuaRocks
 ~~~~~~~~
 
-http://luarocks.org[LuaRocks] can be used to install and manage Lua
+https://luarocks.org[LuaRocks] can be used to install and manage Lua
 modules on a wide range of platforms (including Windows).
 
 First, extract the Lua CJSON source package.
@@ -125,7 +125,7 @@ LuaRocks does not support platform specific configuration for Solaris.
 On Solaris, you may need to manually uncomment +USE_INTERNAL_ISINF+ in
 the rockspec before building this module.
 
-Review the http://luarocks.org/en/Documentation[LuaRocks documentation]
+Review the https://github.com/luarocks/luarocks/wiki/Documentation[LuaRocks documentation]
 for further details.
 
 
@@ -151,7 +151,7 @@ Built-in floating point conversion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Lua CJSON may be built with David Gay's
-http://www.netlib.org/fp/[floating point conversion routines]. This can
+https://netlib.org/fp/[floating point conversion routines]. This can
 increase overall performance by up to 50% on some platforms when
 converting a large amount of numeric data. However, this option reduces
 portability and is disabled by default.
@@ -380,8 +380,8 @@ ensure all Lua strings passed to +cjson.encode+ are UTF-8.
 Base64 is commonly used to encode binary data as the most efficient
 encoding under UTF-8 can only reduce the encoded size by a further
 &#126;8%. Lua Base64 routines can be found in the
-http://w3.impa.br/%7Ediego/software/luasocket/[LuaSocket] and
-http://www.tecgraf.puc-rio.br/%7Elhf/ftp/lua/#lbase64[lbase64] packages.
+https://w3.impa.br/%7Ediego/software/luasocket/[LuaSocket] and
+https://web.tecgraf.puc-rio.br/%7Elhf/ftp/lua/#lbase64[lbase64] packages.
 =========
 
 Lua CJSON uses a heuristic to determine whether to encode a Lua table as
@@ -606,8 +606,8 @@ Lua CJSON decodes JSON +null+ as a Lua +lightuserdata+ NULL pointer.
 References
 ----------
 
-- http://tools.ietf.org/html/rfc4627[RFC 4627]
-- http://www.json.org/[JSON website]
+- https://datatracker.ietf.org/doc/html/rfc4627[RFC 4627]
+- https://json.org/json-en.html[JSON website]
 
 
 // vi:ft=asciidoc tw=72:
