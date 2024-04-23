@@ -87,6 +87,7 @@ typedef enum {
     T_ARR_END,
     T_STRING,
     T_NUMBER,
+    T_INTEGER,
     T_BOOLEAN,
     T_NULL,
     T_COLON,
@@ -104,6 +105,7 @@ static const char *json_token_type_name[] = {
     "T_ARR_END",
     "T_STRING",
     "T_NUMBER",
+    "T_INTEGER",
     "T_BOOLEAN",
     "T_NULL",
     "T_COLON",
@@ -149,6 +151,7 @@ typedef struct {
     union {
         const char *string;
         double number;
+        lua_Integer integer;
         int boolean;
     } value;
     int string_len;
@@ -592,8 +595,17 @@ static void json_append_array(lua_State *l, json_config_t *cfg, int current_dept
 static void json_append_number(lua_State *l, json_config_t *cfg,
                                strbuf_t *json, int lindex)
 {
-    double num = lua_tonumber(l, lindex);
     int len;
+#if LUA_VERSION_NUM >= 503
+    if (lua_isinteger(l, lindex)) {
+        lua_Integer num = lua_tointeger(l, lindex);
+        strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE); /* max length of int64 is 19 */
+        len = sprintf(strbuf_empty_ptr(json), LUA_INTEGER_FMT, num);
+        strbuf_extend_length(json, len);
+        return;
+    }
+#endif
+    double num = lua_tonumber(l, lindex);
 
     if (cfg->encode_invalid_numbers == 0) {
         /* Prevent encoding invalid numbers */
@@ -1008,13 +1020,18 @@ static int json_is_invalid_number(json_parse_t *json)
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
     char *endptr;
-
-    token->type = T_NUMBER;
-    token->value.number = fpconv_strtod(json->ptr, &endptr);
-    if (json->ptr == endptr)
+    token->value.integer = strtoll(json->ptr, &endptr, 0);
+    if (json->ptr == endptr) {
         json_set_token_error(token, json, "invalid number");
-    else
-        json->ptr = endptr;     /* Skip the processed number */
+        return;
+    }
+    if (*endptr == '.' || *endptr == 'e' || *endptr == 'E') {
+        token->type = T_NUMBER;
+        token->value.number = fpconv_strtod(json->ptr, &endptr);
+    } else {
+        token->type = T_INTEGER;
+    }
+    json->ptr = endptr;     /* Skip the processed number */
 
     return;
 }
@@ -1242,6 +1259,9 @@ static void json_process_value(lua_State *l, json_parse_t *json,
         break;;
     case T_NUMBER:
         lua_pushnumber(l, token->value.number);
+        break;;
+    case T_INTEGER:
+        lua_pushinteger(l, token->value.integer);
         break;;
     case T_BOOLEAN:
         lua_pushboolean(l, token->value.boolean);
