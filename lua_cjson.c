@@ -71,6 +71,7 @@
 #define DEFAULT_ENCODE_MAX_DEPTH 1000
 #define DEFAULT_DECODE_MAX_DEPTH 1000
 #define DEFAULT_ENCODE_INVALID_NUMBERS 0
+#define DEFAULT_ENCODE_EMPTY_TABLE 0
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
@@ -130,6 +131,7 @@ typedef struct {
     int encode_invalid_numbers;     /* 2 => Encode as "null" */
     int encode_number_precision;
     int encode_keep_buffer;
+	int encode_empty_table;
 
     int decode_invalid_numbers;
     int decode_max_depth;
@@ -289,6 +291,19 @@ static int json_cfg_encode_max_depth(lua_State *l)
     return json_integer_option(l, 1, &cfg->encode_max_depth, 1, INT_MAX);
 }
 
+/* Configures if we want to encode empty table to dictionary or array in json
+ * encoding */
+static int json_cfg_encode_empty_table(lua_State *l)
+{
+    static const char *options[] = { "dict", "array", "null", NULL };
+    json_config_t *cfg = json_arg_init(l, 1);
+
+    json_enum_option(l, 1, &cfg->encode_empty_table, options, 1);
+
+    return 1;
+}
+
+
 /* Configures the maximum number of nested arrays/objects allowed when
  * encoding */
 static int json_cfg_decode_max_depth(lua_State *l)
@@ -393,6 +408,7 @@ static void json_create_config(lua_State *l)
     cfg->encode_max_depth = DEFAULT_ENCODE_MAX_DEPTH;
     cfg->decode_max_depth = DEFAULT_DECODE_MAX_DEPTH;
     cfg->encode_invalid_numbers = DEFAULT_ENCODE_INVALID_NUMBERS;
+	cfg->encode_empty_table= DEFAULT_ENCODE_EMPTY_TABLE;
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
@@ -693,6 +709,15 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
         len = lua_array_length(l, cfg, json);
         if (len > 0)
             json_append_array(l, cfg, current_depth, json, len);
+		else if(len == 0)
+		{
+			if(cfg->encode_empty_table==0)
+				json_append_object(l, cfg, current_depth, json);
+			else if(cfg->encode_empty_table==1)
+				json_append_array(l, cfg, current_depth, json, len);
+			else
+				strbuf_append_mem(json, "null", 4);
+		}
         else
             json_append_object(l, cfg, current_depth, json);
         break;
@@ -1359,6 +1384,7 @@ static int lua_cjson_new(lua_State *l)
         { "encode", json_encode },
         { "decode", json_decode },
         { "encode_sparse_array", json_cfg_encode_sparse_array },
+        { "encode_empty_table", json_cfg_encode_empty_table},
         { "encode_max_depth", json_cfg_encode_max_depth },
         { "decode_max_depth", json_cfg_decode_max_depth },
         { "encode_number_precision", json_cfg_encode_number_precision },
