@@ -3,8 +3,8 @@
 #       Unix: export LUA_DIR=/home/user/pkg
 #       Windows: set LUA_DIR=c:\lua51
 
+cmake_minimum_required(VERSION 2.6...3.5)
 project(lua-cjson C)
-cmake_minimum_required(VERSION 2.6)
 
 option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
 option(MULTIPLE_THREADS "Support multi-threaded apps with internal fpconv - recommended" ON)
@@ -71,7 +71,9 @@ endif()
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     add_definitions(-Dinline=__inline)
-    add_definitions(-Dsnprintf=_snprintf)
+    if (MSVC_VERSION LESS 1900)
+        add_definitions(-Dsnprintf=_snprintf)
+    endif()
     add_definitions(-Dstrncasecmp=_strnicmp)
 endif()
 
