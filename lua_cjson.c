@@ -80,6 +80,15 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 0
 #endif
 
+#ifdef _MSC_VER
+int strncasecmp(char *s1, char *s2, register int n)
+{
+  while (--n >= 0 && toupper((unsigned char)*s1) == toupper((unsigned char)*s2++))
+      if (*s1++ == ' ')  return 0;
+  return(n < 0 ? 0 : toupper((unsigned char)*s1) - toupper((unsigned char)*--s2));
+}
+#endif
+
 typedef enum {
     T_OBJ_BEGIN,
     T_OBJ_END,
