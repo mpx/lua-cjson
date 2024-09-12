@@ -43,6 +43,12 @@
 #include <lua.h>
 #include <lauxlib.h>
 
+#ifdef _MSC_VER
+# define inline __inline
+# define snprintf _snprintf 
+# define strncasecmp _strnicmp 
+#endif
+
 #include "strbuf.h"
 #include "fpconv.h"
 
@@ -74,6 +80,7 @@
 #define DEFAULT_DECODE_INVALID_NUMBERS 1
 #define DEFAULT_ENCODE_KEEP_BUFFER 1
 #define DEFAULT_ENCODE_NUMBER_PRECISION 14
+#define DEFAULT_DECODE_BIG_NUMBERS_AS_STRINGS 0
 
 #ifdef DISABLE_INVALID_NUMBERS
 #undef DEFAULT_DECODE_INVALID_NUMBERS
@@ -133,6 +140,7 @@ typedef struct {
 
     int decode_invalid_numbers;
     int decode_max_depth;
+    int decode_big_numbers_as_strings;
 } json_config_t;
 
 typedef struct {
@@ -362,6 +370,15 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
     return 1;
 }
 
+static int json_cfg_decode_big_numbers_as_strings(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 1);
+
+    json_enum_option(l, 1, &cfg->decode_big_numbers_as_strings, NULL, 1);
+
+    return 1;
+}
+
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
@@ -396,6 +413,7 @@ static void json_create_config(lua_State *l)
     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
+    cfg->decode_big_numbers_as_strings = DEFAULT_DECODE_BIG_NUMBERS_AS_STRINGS;
 
 #if DEFAULT_ENCODE_KEEP_BUFFER > 0
     strbuf_init(&cfg->encode_buf, 0);
@@ -500,8 +518,17 @@ static int lua_array_length(lua_State *l, json_config_t *cfg, strbuf_t *json)
     int max;
     int items;
 
-    max = 0;
+    max = -1;
     items = 0;
+
+    if (lua_getmetatable(l, -1)) {
+        lua_pushliteral(l, "__name");
+        lua_rawget(l, -2);
+        if (lua_isstring(l, -1) && strcmp("array", lua_tostring(l, -1)) == 0) {
+            max = 0;
+        }
+        lua_pop(l, 2);
+    }
 
     lua_pushnil(l);
     /* table, startkey */
@@ -688,10 +715,20 @@ static void json_append_data(lua_State *l, json_config_t *cfg,
             strbuf_append_mem(json, "false", 5);
         break;
     case LUA_TTABLE:
+        if (lua_getmetatable(l, -1)) {
+            lua_pushliteral(l, "__name");
+            lua_rawget(l, -2);
+            if (lua_isstring(l, -1) && strcmp("null", lua_tostring(l, -1)) == 0) {
+                strbuf_append_mem(json, "null", 4);
+                lua_pop(l, 2);
+                break;
+            }
+            lua_pop(l, 2);
+        }
         current_depth++;
         json_check_encode_depth(l, cfg, current_depth, json);
         len = lua_array_length(l, cfg, json);
-        if (len > 0)
+        if (len >= 0)
             json_append_array(l, cfg, current_depth, json, len);
         else
             json_append_object(l, cfg, current_depth, json);
@@ -1005,12 +1042,36 @@ static int json_is_invalid_number(json_parse_t *json)
     return 0;
 }
 
+
 static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
     char *endptr;
 
-    token->type = T_NUMBER;
     token->value.number = fpconv_strtod(json->ptr, &endptr);
+    if (json->ptr == endptr) {
+        json_set_token_error(token, json, "invalid number");
+    }
+
+    // double has 53 bit significant, therefore 2^53=9007199254740992
+    // is the largest integer that can be represented. For a floating
+    // point value, that consumes more than 16 characters may result
+    // in precision loss during conversion. Note that we are being
+    // pessimistic in that some floating point values that consume
+    // 17 characters may be represented without conversion loss.
+    if ( json->cfg->decode_big_numbers_as_strings &&
+         ( endptr - json->ptr > 16 ||
+           fabs(token->value.number) > 9007199254740991.0 ) )
+    {
+        token->type = T_STRING;
+        strbuf_reset(json->tmp);
+        for (; json->ptr != endptr; json->ptr++ ) {
+            strbuf_append_char_unsafe(json->tmp, json->ptr[0]);
+        }
+        token->value.string = strbuf_string(json->tmp, &token->string_len);
+        return;
+    }
+    token->type = T_NUMBER;
+
     if (json->ptr == endptr)
         json_set_token_error(token, json, "invalid number");
     else
@@ -1210,6 +1271,10 @@ static void json_parse_array_context(lua_State *l, json_parse_t *json)
 
     /* Handle empty arrays */
     if (token.type == T_ARR_END) {
+        // Mark as array:
+        luaL_getmetatable(l, "array");
+        lua_setmetatable(l, -2);
+
         json_decode_ascend(json);
         return;
     }
@@ -1254,9 +1319,9 @@ static void json_process_value(lua_State *l, json_parse_t *json,
         break;;
     case T_NULL:
         /* In Lua, setting "t[k] = nil" will delete k from the table.
-         * Hence a NULL pointer lightuserdata object is used instead */
-        lua_pushlightuserdata(l, NULL);
-        break;;
+         * Hence a NULL userdata object is used instead */
+        luaL_getmetatable(l, "null");
+        break;
     default:
         json_throw_parse_error(l, json, "value", token);
     }
@@ -1352,6 +1417,12 @@ static int json_protect_conversion(lua_State *l)
     return luaL_error(l, "Memory allocation error in CJSON protected call");
 }
 
+static int json_null_tostring(lua_State *l)
+{
+    lua_pushliteral(l, "null");
+    return 1;
+}
+
 /* Return cjson module table */
 static int lua_cjson_new(lua_State *l)
 {
@@ -1365,12 +1436,31 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+        { "decode_big_numbers_as_strings", json_cfg_decode_big_numbers_as_strings },
         { "new", lua_cjson_new },
         { NULL, NULL }
     };
 
     /* Initialise number conversions */
     fpconv_init();
+
+    /* Initialize "null" */
+    if ( luaL_newmetatable(l, "null") ) {
+        lua_createtable(l, 0, 2);
+        lua_pushliteral(l, "null");
+        lua_setfield(l, -2, "__name");
+        lua_pushcfunction(l, json_null_tostring);
+        lua_setfield(l, -2, "__tostring");
+        lua_setmetatable(l, -2);
+    }
+    lua_pop(l, 1);
+
+    /* Initialize "array" metatable */
+    if ( luaL_newmetatable(l, "array") ) {
+        lua_pushliteral(l, "array");
+        lua_setfield(l, -2, "__name");
+    }
+    lua_pop(l, 1);
 
     /* cjson module table */
     lua_newtable(l);
@@ -1380,7 +1470,7 @@ static int lua_cjson_new(lua_State *l)
     luaL_setfuncs(l, reg, 1);
 
     /* Set cjson.null */
-    lua_pushlightuserdata(l, NULL);
+    luaL_getmetatable(l, "null");
     lua_setfield(l, -2, "null");
 
     /* Set module name / version fields */
