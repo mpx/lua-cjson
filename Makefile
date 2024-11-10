@@ -18,10 +18,13 @@ PREFIX =            /usr/local
 CFLAGS =            -O3 -Wall -pedantic -DNDEBUG
 CJSON_CFLAGS =      -fpic
 CJSON_LDFLAGS =     -shared
+LUA_PC =            lua$(LUA_VERSION)
 LUA_INCLUDE_DIR =   $(PREFIX)/include
 LUA_CMODULE_DIR =   $(PREFIX)/lib/lua/$(LUA_VERSION)
 LUA_MODULE_DIR =    $(PREFIX)/share/lua/$(LUA_VERSION)
 LUA_BIN_DIR =       $(PREFIX)/bin
+LUA_CFLAGS =        $(shell pkg-config $(LUA_PC) --cflags --silence-errors \
+	|| echo "-I$(LUA_INCLUDE_DIR)")
 
 ##### Platform overrides #####
 ##
@@ -79,7 +82,7 @@ EXECPERM =          755
 
 ASCIIDOC =          asciidoc
 
-BUILD_CFLAGS =      -I$(LUA_INCLUDE_DIR) $(CJSON_CFLAGS)
+BUILD_CFLAGS =      $(LUA_CFLAGS) $(CJSON_CFLAGS)
 OBJS =              lua_cjson.o strbuf.o $(FPCONV_OBJS)
 
 .PHONY: all clean install install-extra doc
