@@ -17,6 +17,7 @@ extern void fpconv_init();
 
 extern int fpconv_g_fmt(char*, double, int);
 extern double fpconv_strtod(const char*, char**);
+extern char locale_decimal_point;
 
 /* vi:ai et sw=4 ts=4:
  */

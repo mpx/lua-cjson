@@ -40,7 +40,7 @@
  *
  * This avoids the need for per thread storage or expensive checks
  * for call. */
-static char locale_decimal_point = '.';
+char locale_decimal_point = '.';
 
 /* In theory multibyte decimal_points are possible, but
  * Lua CJSON only supports UTF-8 and known locales only have
