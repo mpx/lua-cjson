@@ -34,6 +34,10 @@ if(USE_LUAU)
         luau
         GIT_REPOSITORY https://github.com/luau-lang/luau.git
         GIT_TAG        origin/master
+        GIT_SHALLOW    TRUE
+        GIT_PROGRESS   TRUE
+        PATCH_COMMAND  git apply ${CMAKE_CURRENT_SOURCE_DIR}/luau_extern_fix.patch
+        UPDATE_DISCONNECTED 1
     )
     set(LUAU_BUILD_CLI   OFF CACHE BOOL "Build CLI"                      FORCE)
     set(LUAU_BUILD_TESTS OFF CACHE BOOL "Build tests"                    FORCE)
