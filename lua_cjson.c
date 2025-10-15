@@ -36,18 +36,27 @@
  *       difficult to know object/array sizes ahead of time.
  */
 
+#include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include <math.h>
 #include <limits.h>
 #include <lua.h>
+#ifdef LUAU
+#include "lualib.h"
+#else
 #include <lauxlib.h>
+#endif
 
 #include "strbuf.h"
 #include "fpconv.h"
 
 #ifndef CJSON_MODNAME
 #define CJSON_MODNAME   "cjson"
+#endif
+
+#ifndef CJSON_SAFE_MODNAME
+#define CJSON_SAFE_MODNAME "cjson_safe"
 #endif
 
 #ifndef CJSON_VERSION
@@ -362,31 +371,29 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
     return 1;
 }
 
+static void json_config_destructor(void* p)
+{
+    json_config_t *cfg;
+    cfg = (json_config_t *)p;
+    if (cfg && cfg->encode_keep_buffer)
+        strbuf_free(&cfg->encode_buf);
+}
+
 static int json_destroy_config(lua_State *l)
 {
     json_config_t *cfg;
 
     cfg = (json_config_t *)lua_touserdata(l, 1);
-    if (cfg)
-        strbuf_free(&cfg->encode_buf);
+    json_config_destructor(cfg);
     cfg = NULL;
 
     return 0;
 }
 
-static void json_create_config(lua_State *l)
+static void json_config_init(json_config_t *cfg)
 {
-    json_config_t *cfg;
     int i;
-
-    cfg = (json_config_t *)lua_newuserdata(l, sizeof(*cfg));
-
-    /* Create GC method to clean up strbuf */
-    lua_newtable(l);
-    lua_pushcfunction(l, json_destroy_config);
-    lua_setfield(l, -2, "__gc");
-    lua_setmetatable(l, -2);
-
+    
     cfg->encode_sparse_convert = DEFAULT_SPARSE_CONVERT;
     cfg->encode_sparse_ratio = DEFAULT_SPARSE_RATIO;
     cfg->encode_sparse_safe = DEFAULT_SPARSE_SAFE;
@@ -445,6 +452,38 @@ static void json_create_config(lua_State *l)
     cfg->escape2char['f'] = '\f';
     cfg->escape2char['r'] = '\r';
     cfg->escape2char['u'] = 'u';          /* Unicode parsing required */
+}
+
+static int json_reset_config(lua_State *l)
+{
+    json_config_t *cfg = json_arg_init(l, 0);
+
+    if (cfg){
+        if (cfg->encode_keep_buffer)
+            strbuf_free(&cfg->encode_buf);
+        json_config_init(cfg);
+    }
+
+    return 0;
+}
+
+static void json_create_config(lua_State *l)
+{
+    json_config_t *cfg;
+
+#ifdef LUAU
+    cfg = (json_config_t *)lua_newuserdatadtor(l, sizeof(*cfg), json_config_destructor);
+#else
+    cfg = (json_config_t *)lua_newuserdata(l, sizeof(*cfg));
+
+    /* Create GC method to clean up strbuf */
+    lua_newtable(l);
+    lua_pushcfunction(l, json_destroy_config);
+    lua_setfield(l, -2, "__gc");
+    lua_setmetatable(l, -2);
+#endif
+
+    json_config_init(cfg);
 }
 
 /* ===== ENCODING ===== */
@@ -1140,8 +1179,8 @@ static void json_decode_descend(lua_State *l, json_parse_t *json, int slots)
     }
 
     strbuf_free(json->tmp);
-    luaL_error(l, "Found too many nested data structures (%d) at character %d",
-        json->current_depth, json->ptr - json->data);
+    luaL_error(l, "Found too many nested data structures (%d) at character %lld",
+        json->current_depth, (long long int)(json->ptr - json->data));
 }
 
 static void json_parse_object_context(lua_State *l, json_parse_t *json)
@@ -1317,7 +1356,11 @@ static void luaL_setfuncs (lua_State *l, const luaL_Reg *reg, int nup)
     for (; reg->name != NULL; reg++) {  /* fill the table with given functions */
         for (i = 0; i < nup; i++)  /* copy upvalues to the top */
             lua_pushvalue(l, -nup);
+        #ifdef LUAU
+        lua_pushcclosure(l, reg->func, reg->name, nup);
+        #else
         lua_pushcclosure(l, reg->func, nup);  /* closure with those upvalues */
+        #endif
         lua_setfield(l, -(nup + 2), reg->name);
     }
     lua_pop(l, nup);  /* remove upvalues */
@@ -1349,7 +1392,12 @@ static int json_protect_conversion(lua_State *l)
 
     /* Since we are not using a custom error handler, the only remaining
      * errors are memory related */
+    #ifdef LUAU
+    luaL_error(l, "Memory allocation error in CJSON protected call"); /* never returns */
+    return 0;
+    #else
     return luaL_error(l, "Memory allocation error in CJSON protected call");
+    #endif
 }
 
 /* Return cjson module table */
@@ -1365,7 +1413,10 @@ static int lua_cjson_new(lua_State *l)
         { "encode_keep_buffer", json_cfg_encode_keep_buffer },
         { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
         { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+#ifndef ENABLE_CJSON_GLOBAL
         { "new", lua_cjson_new },
+#endif
+        { "reset", json_reset_config},
         { NULL, NULL }
     };
 
@@ -1400,13 +1451,23 @@ static int lua_cjson_safe_new(lua_State *l)
 
     lua_cjson_new(l);
 
+#ifndef ENABLE_CJSON_GLOBAL
     /* Fix new() method */
+    #ifdef LUAU
+    lua_pushcfunction(l, lua_cjson_safe_new, "lua_cjson_safe_new");
+    #else
     lua_pushcfunction(l, lua_cjson_safe_new);
+    #endif
     lua_setfield(l, -2, "new");
+#endif
 
     for (i = 0; func[i]; i++) {
         lua_getfield(l, -1, func[i]);
+        #ifdef LUAU
+        lua_pushcclosure(l, json_protect_conversion, func[i], 1);
+        #else
         lua_pushcclosure(l, json_protect_conversion, 1);
+        #endif
         lua_setfield(l, -2, func[i]);
     }
 
@@ -1430,6 +1491,12 @@ CJSON_EXPORT int luaopen_cjson(lua_State *l)
 CJSON_EXPORT int luaopen_cjson_safe(lua_State *l)
 {
     lua_cjson_safe_new(l);
+
+#ifdef ENABLE_CJSON_GLOBAL
+    /* Register a global "cjson_safe" table. */
+    lua_pushvalue(l, -1);
+    lua_setglobal(l, CJSON_SAFE_MODNAME);
+#endif
 
     /* Return cjson.safe table */
     return 1;
