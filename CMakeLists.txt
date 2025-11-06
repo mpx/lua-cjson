@@ -1,10 +1,11 @@
 # If Lua is installed in a non-standard location, please set the LUA_DIR
 # environment variable to point to prefix for the install. Eg:
 #       Unix: export LUA_DIR=/home/user/pkg
-#       Windows: set LUA_DIR=c:\lua51
+#       Windows: set LUA_DIR=c:\lua54
+
+cmake_minimum_required(VERSION 2.6)
 
 project(lua-cjson C)
-cmake_minimum_required(VERSION 2.6)
 
 option(USE_INTERNAL_FPCONV "Use internal strtod() / g_fmt() code for performance")
 option(MULTIPLE_THREADS "Support multi-threaded apps with internal fpconv - recommended" ON)
@@ -15,7 +16,7 @@ if(NOT CMAKE_BUILD_TYPE)
         FORCE)
 endif()
 
-find_package(Lua51 REQUIRED)
+find_package(Lua 5.4 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
 if(NOT USE_INTERNAL_FPCONV)
@@ -65,7 +66,7 @@ if(WIN32)
     # Windows sprintf()/strtod() handle NaN/inf differently. Not supported.
     add_definitions(-DDISABLE_INVALID_NUMBERS)
 else()
-    set(_lua_module_dir "${_lua_lib_dir}/lua/5.1")
+    set(_lua_module_dir "${_lua_lib_dir}/lua/5.4")
 endif()
 
 if(MSVC)
@@ -75,7 +76,7 @@ if(MSVC)
     add_definitions(-Dstrncasecmp=_strnicmp)
 endif()
 
-add_library(cjson MODULE lua_cjson.c strbuf.c ${FPCONV_SOURCES})
+add_library(cjson STATIC lua_cjson.c strbuf.c ${FPCONV_SOURCES})
 set_target_properties(cjson PROPERTIES PREFIX "")
 target_link_libraries(cjson ${_MODULE_LINK})
 install(TARGETS cjson DESTINATION "${_lua_module_dir}")
